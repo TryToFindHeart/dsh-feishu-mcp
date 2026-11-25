@@ -110,3 +110,33 @@ test('notifier 在 turn/end 只发一张含 @all 的卡片，取消轮次静默'
     fake.restore()
   }
 })
+
+test('由飞书私聊发起的轮次只回原对话，不重复发 webhook', async () => {
+  const fake = installFetch(async () => new Response(JSON.stringify({ code: 0 }), { status: 200 }))
+  const chatCards = []
+  const calls = []
+  const notifier = createNotifier({
+    readState: async () => ({ ...baseState, maxChars: 1200, inboundReply: true }),
+    log: () => {},
+    trace: (kind) => calls.push(kind),
+    takeReply: (sessionId) => sessionId === 'session-chat' ? { chatId: 'oc_chat_1', messageId: 'om_1' } : undefined,
+    sendChatCard: async (chatId, card) => { chatCards.push({ chatId, card }) },
+  })
+  const session = { id: 'session-chat', header: { cwd: '/workspace/demo' } }
+
+  try {
+    await notifier.onSessionEvent(session, { type: 'turn/start' })
+    await notifier.onSessionEvent(session, { type: 'assistant/message', data: { message: { content: [{ type: 'text', text: '任务完成' }] } } })
+    await notifier.onSessionEvent(session, { type: 'turn/end', data: { reason: { kind: 'completed' } } })
+    await new Promise((resolve) => setTimeout(resolve, 20))
+
+    assert.equal(fake.calls.length, 0)
+    assert.equal(chatCards.length, 1)
+    assert.equal(chatCards[0].chatId, 'oc_chat_1')
+    const chatContent = chatCards[0].card.body.elements.map((element) => element.content || '').join('\n')
+    assert.match(chatContent, /任务完成/)
+    assert.ok(calls.includes('chat-card-sent'))
+  } finally {
+    fake.restore()
+  }
+})

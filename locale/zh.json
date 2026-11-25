@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "飞书结束通知",
-    "description": "任务结束后向飞书群机器人 webhook 推送卡片强提醒，支持 @all。"
+    "title": "飞书通知与私聊入站",
+    "description": "结束卡片强提醒，并支持飞书私聊消息转发到 DSH。"
   }
 }

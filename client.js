@@ -8,7 +8,7 @@
 
   var PLUGIN_ID = 'dsh-feishu-mcp';
   var API = '/api/feishu-mcp';
-  var BUILD = '0.1.0';
+  var BUILD = '0.2.0';
 
   var CSS = [
     '.fsmcp-page{display:flex;flex-direction:column;gap:18px;max-width:760px;color:var(--dsw-alias-label-primary,#1a1a1a);}',
@@ -35,6 +35,10 @@
     '.fsmcp-actions{display:flex;gap:8px;flex-wrap:wrap;}',
     '.fsmcp-input{height:34px;width:100%;box-sizing:border-box;border:1px solid var(--dsw-alias-border-l1);border-radius:8px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font-size:13px;padding:0 10px;outline:none;}',
     '.fsmcp-input:focus{border-color:var(--dsw-alias-brand-primary);}',
+    '.fsmcp-textarea{width:100%;box-sizing:border-box;min-height:62px;resize:vertical;border:1px solid var(--dsw-alias-border-l1);border-radius:8px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font-size:13px;padding:8px 10px;outline:none;}',
+    '.fsmcp-textarea:focus{border-color:var(--dsw-alias-brand-primary);}',
+    '.fsmcp-inline{display:inline-flex;align-items:center;gap:7px;}',
+    '.fsmcp-value{font-size:13px;}',
     '.fsmcp-field{display:flex;flex-direction:column;gap:6px;}',
     '.fsmcp-field-label{font-size:12px;font-weight:500;color:var(--dsw-alias-label-secondary);}',
     '.fsmcp-switch{position:relative;width:40px;height:22px;border-radius:999px;border:1px solid var(--dsw-alias-border-l2,#3a3a3a);background:var(--dsw-alias-bg-layer-2,#2a2a2a);cursor:pointer;flex:none;}',
@@ -122,7 +126,13 @@
       var statePair = useState(null);
       var saved = statePair[0];
       var setSaved = statePair[1];
-      var formPair = useState({ webhookUrl: '', webhookAtAll: true, notifyTurnEnd: true, cardTitle: 'DSH 任务结束提醒', maxChars: 1200, trace: false });
+      var formPair = useState({
+        webhookUrl: '', webhookAtAll: true, notifyTurnEnd: true,
+        cardTitle: 'DSH 任务结束提醒', maxChars: 1200, trace: false,
+        appId: '', appSecret: '', domain: 'feishu', enableInbound: false,
+        allowedOpenIds: '', sessionMode: 'perChat', sessionCwd: '~/dsh-feishu-mcp',
+        workspaceTitle: '飞书 DSH', allowCommands: true, inboundReply: true,
+      });
       var form = formPair[0];
       var setForm = formPair[1];
       var busyPair = useState(false);
@@ -141,6 +151,16 @@
           cardTitle: value.cardTitle,
           maxChars: value.maxChars,
           trace: value.trace,
+          appId: value.appId || '',
+          appSecret: '',
+          domain: value.domain || 'feishu',
+          enableInbound: Boolean(value.enableInbound),
+          allowedOpenIds: (value.allowedOpenIds || []).join(', '),
+          sessionMode: value.sessionMode || 'perChat',
+          sessionCwd: value.sessionCwd || '~/dsh-feishu-mcp',
+          workspaceTitle: value.workspaceTitle || '飞书 DSH',
+          allowCommands: value.allowCommands !== false,
+          inboundReply: value.inboundReply !== false,
         });
       }
 
@@ -171,12 +191,27 @@
             cardTitle: form.cardTitle,
             maxChars: form.maxChars,
             trace: form.trace,
+            appId: form.appId,
+            domain: form.domain,
+            enableInbound: form.enableInbound,
+            allowedOpenIds: form.allowedOpenIds.split(/[,，\n]/).map(function (item) { return item.trim(); }).filter(Boolean),
+            sessionMode: form.sessionMode,
+            sessionCwd: form.sessionCwd,
+            workspaceTitle: form.workspaceTitle,
+            allowCommands: form.allowCommands,
+            inboundReply: form.inboundReply,
           };
-          // 留空表示保留已保存的 webhook（Host 侧也做了同样处理）。
+          // 留空表示保留已保存的 webhook / App Secret（Host 侧同样处理）。
           if (form.webhookUrl) body.webhookUrl = form.webhookUrl;
+          if (form.appSecret) body.appSecret = form.appSecret;
           var result = await api('/config', { method: 'POST', body: body });
           applyState(result.state);
-          setMessage({ kind: 'ok', text: '配置已保存。' });
+          setMessage({
+            kind: 'ok',
+            text: form.enableInbound
+              ? '配置已保存，飞书长连接正在重连；到「验证连接」确认机器人身份。'
+              : '配置已保存。',
+          });
         } catch (error) {
           setMessage({ kind: 'error', text: errorMessage(error) });
         } finally {
@@ -204,6 +239,39 @@
           var result = await api('/clear', { method: 'POST', body: {} });
           applyState(result.state);
           setMessage({ kind: 'ok', text: '配置已清空。' });
+        } catch (error) {
+          setMessage({ kind: 'error', text: errorMessage(error) });
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function verify() {
+        setBusy(true);
+        setMessage(null);
+        try {
+          var body = {};
+          if (form.appId) body.appId = form.appId;
+          if (form.appSecret) body.appSecret = form.appSecret;
+          var result = await api('/verify', { method: 'POST', body: body });
+          setMessage({
+            kind: 'ok',
+            text: '飞书应用已连通：' + (result.botName || '机器人') + (result.botOpenId ? '（' + result.botOpenId + '）' : ''),
+          });
+        } catch (error) {
+          setMessage({ kind: 'error', text: errorMessage(error) });
+        } finally {
+          setBusy(false);
+        }
+      }
+
+      async function disconnect() {
+        setBusy(true);
+        setMessage(null);
+        try {
+          var result = await api('/disconnect', { method: 'POST', body: {} });
+          applyState(result.state);
+          setMessage({ kind: 'ok', text: '飞书应用凭据已清除，入站监听已关闭；webhook 配置保留。' });
         } catch (error) {
           setMessage({ kind: 'error', text: errorMessage(error) });
         } finally {
@@ -276,9 +344,86 @@
             control: h(Switch, { label: t('trace'), checked: form.trace, onChange: function (value) { update('trace', value); } }),
           })),
 
+        h(Card, { title: t('inboundCard') },
+          h(Row, {
+            label: t('enableInbound'),
+            hint: t('enableInboundHint'),
+            control: h(Switch, { label: t('enableInbound'), checked: form.enableInbound, onChange: function (value) { update('enableInbound', value); } }),
+          }),
+          h(Row, {
+            label: t('appStatus'),
+            hint: t('appStatusHint'),
+            control: h('span', { className: 'fsmcp-inline' },
+              h('span', { className: 'fsmcp-dot ' + (saved && saved.appSecretConfigured ? 'fsmcp-dot-on' : 'fsmcp-dot-off') }),
+              h('span', { className: 'fsmcp-value' }, saved && saved.appSecretConfigured ? t('appConnected') : t('appNotConnected'))),
+          }),
+          h('div', { className: 'fsmcp-field' },
+            h('span', { className: 'fsmcp-field-label' }, t('appId')),
+            h('input', {
+              className: 'fsmcp-input', type: 'text', value: form.appId,
+              placeholder: 'cli_xxxxxxxxxxxxxxxx',
+              onChange: function (event) { update('appId', event.target.value); },
+            })),
+          h('div', { className: 'fsmcp-field' },
+            h('span', { className: 'fsmcp-field-label' }, t('appSecret')),
+            h('input', {
+              className: 'fsmcp-input', type: 'password', value: form.appSecret,
+              placeholder: saved && saved.appSecretConfigured ? t('keepCurrent') : '',
+              onChange: function (event) { update('appSecret', event.target.value); },
+            }),
+            h('span', { className: 'fsmcp-hint' }, t('appSecretHint'))),
+          h('div', { className: 'fsmcp-field' },
+            h('span', { className: 'fsmcp-field-label' }, t('domain')),
+            h('input', {
+              className: 'fsmcp-input', type: 'text', value: form.domain,
+              placeholder: 'feishu',
+              onChange: function (event) { update('domain', event.target.value); },
+            }),
+            h('span', { className: 'fsmcp-hint' }, t('domainHint'))),
+          h('div', { className: 'fsmcp-field' },
+            h('span', { className: 'fsmcp-field-label' }, t('allowedOpenIds')),
+            h('textarea', {
+              className: 'fsmcp-textarea', value: form.allowedOpenIds,
+              placeholder: 'ou_xxx, ou_yyy',
+              onChange: function (event) { update('allowedOpenIds', event.target.value); },
+            }),
+            h('span', { className: 'fsmcp-hint' }, t('allowedOpenIdsHint'))),
+          h('div', { className: 'fsmcp-field' },
+            h('span', { className: 'fsmcp-field-label' }, t('sessionMode')),
+            h('input', {
+              className: 'fsmcp-input', type: 'text', value: form.sessionMode,
+              placeholder: 'perChat',
+              onChange: function (event) { update('sessionMode', event.target.value); },
+            }),
+            h('span', { className: 'fsmcp-hint' }, t('sessionModeHint'))),
+          h('div', { className: 'fsmcp-field' },
+            h('span', { className: 'fsmcp-field-label' }, t('sessionCwd')),
+            h('input', {
+              className: 'fsmcp-input', type: 'text', value: form.sessionCwd,
+              onChange: function (event) { update('sessionCwd', event.target.value); },
+            })),
+          h('div', { className: 'fsmcp-field' },
+            h('span', { className: 'fsmcp-field-label' }, t('workspaceTitle')),
+            h('input', {
+              className: 'fsmcp-input', type: 'text', value: form.workspaceTitle,
+              onChange: function (event) { update('workspaceTitle', event.target.value); },
+            })),
+          h(Row, {
+            label: t('allowCommands'),
+            hint: t('allowCommandsHint'),
+            control: h(Switch, { label: t('allowCommands'), checked: form.allowCommands, onChange: function (value) { update('allowCommands', value); } }),
+          }),
+          h(Row, {
+            label: t('inboundReply'),
+            hint: t('inboundReplyHint'),
+            control: h(Switch, { label: t('inboundReply'), checked: form.inboundReply, onChange: function (value) { update('inboundReply', value); } }),
+          })),
+
         h('div', { className: 'fsmcp-actions' },
           h('button', { type: 'button', className: 'fsmcp-btn fsmcp-btn-primary', disabled: busy, onClick: save }, t('save')),
           h('button', { type: 'button', className: 'fsmcp-btn fsmcp-btn-ghost', disabled: busy || !saved || !saved.configured, onClick: test }, t('test')),
+          h('button', { type: 'button', className: 'fsmcp-btn fsmcp-btn-ghost', disabled: busy, onClick: verify }, t('verify')),
+          h('button', { type: 'button', className: 'fsmcp-btn fsmcp-btn-ghost', disabled: busy || !saved || !saved.appSecretConfigured, onClick: disconnect }, t('disconnect')),
           h('button', { type: 'button', className: 'fsmcp-btn fsmcp-btn-danger', disabled: busy || !saved || !saved.configured, onClick: clear }, t('clear'))),
 
         h('div', { className: 'fsmcp-warn' }, t('warning')),
@@ -301,31 +446,53 @@
     var dictionary = {
       zh: {
         nav: '飞书通知', title: '飞书结束通知',
-        description: '每轮任务结束时向飞书群机器人推送结果卡片。当前阶段只做出站通知。',
+        description: '任务结束向飞书群推送结果卡片；也能在飞书里私聊机器人，把消息转给 DSH。',
         webhookCard: 'Webhook 配置', status: '连接状态', statusHint: '出站 webhook 是否配置。',
-        connected: '已配置', notConnected: '未配置', currentWebhook: '当前地址', maskHint: '出于安全考虑只显示末 8 位。',
+        connected: '已配置', notConnected: '未配置', currentWebhook: '当前地址', maskHint: '出于安全考虑只显示末 4 位。',
         webhook: '飞书 webhook 地址', keepCurrent: '留空则保留当前地址',
         webhookHint: '在飞书群 → 设置 → 群机器人 → 添加自定义机器人后复制 Webhook 地址。该地址视为密钥，不要提交到代码库。',
         behaviorCard: '通知行为', notifyTurnEnd: '任务结束时推送', notifyTurnEndHint: '关闭后不再发送任何通知。',
         atAll: '@所有人 强提醒', atAllHint: '在结果卡片内 @所有人，不再额外发送文本消息。',
         cardTitle: '卡片标题', maxChars: '正文最大字数', maxCharsHint: '超过此长度的结果会自动截断，范围 200–8000。',
         trace: '诊断日志', traceHint: '在控制台记录发送结果，排障用。',
-        save: '保存配置', test: '发送测试消息', clear: '清空配置',
-        warning: '入站私聊监听订阅尚未启用；本插件目前只负责把 DSH 的结果推送到飞书。',
+        save: '保存配置', test: '发送测试消息', verify: '验证飞书应用', disconnect: '断开飞书应用', clear: '清空全部',
+        inboundCard: '飞书私聊入站', enableInbound: '启用私聊转发',
+        enableInboundHint: '打开后通过 WebSocket 长连接接收飞书私聊；无需公网 IP 或回调域名。',
+        appStatus: '应用凭据', appStatusHint: 'App Secret 只写不回读。',
+        appConnected: '已配置', appNotConnected: '未配置',
+        appId: 'App ID', appSecret: 'App Secret', appSecretHint: '自建应用的凭据，留空表示保留已保存的值。',
+        domain: '域名', domainHint: '飞书写 feishu，Lark 写 lark。',
+        allowedOpenIds: '允许的使用者 Open ID', allowedOpenIdsHint: '逗号分隔；留空则自动认领第一个私聊你的人，之后锁定。',
+        sessionMode: '会话模式', sessionModeHint: 'perChat=每个私聊一个会话；fixed=固定 homeChatId 绑定的会话；active=跟随 DSH 当前会话。',
+        sessionCwd: '新会话工作目录', workspaceTitle: '工作区标题',
+        allowCommands: '允许飞书里指挥', allowCommandsHint: '关闭后只接收普通消息，不再解析 / 命令。',
+        inboundReply: '结果回到原私聊', inboundReplyHint: '打开后由这条私聊发起的轮次只回原对话；关闭则仍走群 webhook 强提醒。',
+        warning: '入站需要先在飞书开放平台创建企业自建应用、开启机器人、订阅 im.message.receive_v1 事件并选用长连接。App Secret 与 webhook 都属于密钥，不要提交到代码库。',
       },
       en: {
         nav: 'Feishu Notify', title: 'Feishu turn-end notification',
-        description: 'Push a result card to a Feishu group bot when each turn ends. Outbound only for now.',
+        description: 'Push result cards to a Feishu group, and forward private messages from Feishu into DSH.',
         webhookCard: 'Webhook', status: 'Status', statusHint: 'Whether the outbound webhook is configured.',
-        connected: 'Configured', notConnected: 'Not configured', currentWebhook: 'Current URL', maskHint: 'Only the last 8 characters are shown.',
+        connected: 'Configured', notConnected: 'Not configured', currentWebhook: 'Current URL', maskHint: 'Only the last 4 characters are shown.',
         webhook: 'Feishu webhook URL', keepCurrent: 'Leave blank to keep current',
         webhookHint: 'Create a custom bot in Feishu group settings and copy its webhook URL. Treat it as a secret.',
         behaviorCard: 'Behavior', notifyTurnEnd: 'Notify on turn end', notifyTurnEndHint: 'Turn off to stop all notifications.',
         atAll: 'Mention @all', atAllHint: 'Mention everyone inside the result card only; no extra text message.',
         cardTitle: 'Card title', maxChars: 'Max body chars', maxCharsHint: 'Long results are truncated. Range: 200–8000.',
         trace: 'Diagnostics', traceHint: 'Log delivery results to the console.',
-        save: 'Save', test: 'Send test', clear: 'Clear',
-        warning: 'Inbound private-chat subscription is not enabled yet; this plugin only pushes DSH results to Feishu.',
+        save: 'Save', test: 'Send test', verify: 'Verify app', disconnect: 'Disconnect app', clear: 'Clear all',
+        inboundCard: 'Private-chat inbound', enableInbound: 'Enable inbound',
+        enableInboundHint: 'Receive private messages over a WebSocket long connection; no public IP or callback URL needed.',
+        appStatus: 'App credentials', appStatusHint: 'App Secret is write-only.',
+        appConnected: 'Configured', appNotConnected: 'Not configured',
+        appId: 'App ID', appSecret: 'App Secret', appSecretHint: 'Credentials of your self-built app. Leave blank to keep the saved value.',
+        domain: 'Domain', domainHint: 'Use feishu for Feishu, lark for Lark.',
+        allowedOpenIds: 'Allowed user Open IDs', allowedOpenIdsHint: 'Comma-separated. Leave empty to claim the first person who messages the bot, then lock it.',
+        sessionMode: 'Session mode', sessionModeHint: 'perChat: one DSH session per chat; fixed: use the homeChatId binding; active: follow the current DSH session.',
+        sessionCwd: 'New session cwd', workspaceTitle: 'Workspace title',
+        allowCommands: 'Allow commands from Feishu', allowCommandsHint: 'Turn off to accept plain messages only and ignore / commands.',
+        inboundReply: 'Reply in the original chat', inboundReplyHint: 'When on, turns started from a private chat reply there only; when off, they still go to the group webhook.',
+        warning: 'Inbound requires a self-built Feishu app with bot capability, im.message.receive_v1 event subscription, and long-connection mode. Treat both App Secret and webhook URL as secrets.',
       },
     };
     var t = function (key) { return (dictionary[language] || dictionary.zh)[key] || key; };

@@ -1,11 +1,11 @@
 {
   "name": "dsh-feishu-mcp",
-  "version": "0.1.1",
-  "description": "DSH 任务结束时向飞书自定义机器人 webhook 推送卡片强提醒。",
+  "version": "0.2.0",
+  "description": "任务结束向飞书推送卡片强提醒，并支持通过飞书自建应用私聊把消息转给 DSH。",
   "license": "MIT",
   "meta": {
-    "title": "飞书结束通知",
-    "description": "任务结束后向飞书群发送卡片强提醒，支持 webhook 配置与 @all。"
+    "title": "飞书通知与私聊入站",
+    "description": "结束卡片强提醒 + 飞书私聊转发到 DSH，支持 webhook、@all、应用机器人长连接与会话绑定。"
   },
   "icon": "icon.svg",
   "type": "module",
@@ -30,7 +30,9 @@
     "dsh-plugin",
     "feishu",
     "webhook",
-    "notification"
+    "notification",
+    "inbound",
+    "bot"
   ],
   "engines": {
     "node": ">=22"
@@ -59,5 +61,8 @@
   ],
   "peerDependencies": {
     "@deepseek-ai/cordis": "~4.0.5"
+  },
+  "dependencies": {
+    "@larksuiteoapi/node-sdk": "^1.76.0"
   }
 }
