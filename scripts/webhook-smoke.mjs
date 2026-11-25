@@ -9,7 +9,7 @@
  */
 import { buildContentCards } from '../lib/card.js'
 import { readState, writeState } from '../lib/state.js'
-import { sendWebhookAtAll, sendWebhookCard } from '../lib/webhook.js'
+import { sendWebhookCard } from '../lib/webhook.js'
 
 const args = process.argv.slice(2)
 const flag = (name) => args.includes(name)
@@ -48,20 +48,10 @@ const cards = buildContentCards({
     `> 测试时间：${new Date().toLocaleString('zh-CN', { hour12: false })}`,
   ].join('\n'),
   note: 'dsh-feishu-mcp · outbound only',
-  mentionAll: false,
+  mentionAll: !noAtAll,
 })
 
 let ok = true
-if (!noAtAll) {
-  try {
-    const result = await sendWebhookAtAll(state, 'DSH 飞书通知连通性测试：出站 webhook 可用。')
-    console.log('@all 文本发送成功：', JSON.stringify(result))
-  } catch (error) {
-    ok = false
-    console.error('@all 文本发送失败：', error.message)
-  }
-}
-
 for (let index = 0; index < cards.length; index += 1) {
   try {
     const result = await sendWebhookCard(state, cards[index])

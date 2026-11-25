@@ -10,7 +10,7 @@
 import { buildContentCards } from './lib/card.js'
 import { createNotifier } from './lib/notifier.js'
 import { clearState, publicState, readState, writeState } from './lib/state.js'
-import { sendWebhookAtAll, sendWebhookCard } from './lib/webhook.js'
+import { sendWebhookCard } from './lib/webhook.js'
 
 /** 路由必须挂在 /api 下，connection.fetch.register 会做路径校验。 */
 const API = '/api/feishu-mcp'
@@ -123,17 +123,9 @@ export function apply(ctx) {
             '- 之后每一轮任务结束都会在这里收到一张结果卡片。',
           ].join('\n'),
           note: `测试时间：${new Date().toLocaleString('zh-CN', { hour12: false })}`,
-          mentionAll: false,
+          mentionAll: state.webhookAtAll,
         })
         const results = []
-        if (state.webhookAtAll) {
-          try {
-            await sendWebhookAtAll(state, `${state.cardTitle || 'DSH 任务结束提醒'}\n连通性测试：飞书通知插件已连通。`)
-            results.push({ stage: 'at-all', ok: true })
-          } catch (error) {
-            results.push({ stage: 'at-all', ok: false, message: String((error && error.message) || error) })
-          }
-        }
         for (let index = 0; index < cards.length; index += 1) {
           try {
             await sendWebhookCard(state, cards[index])

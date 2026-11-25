@@ -79,7 +79,7 @@ test('sendWebhook 把非 0 code 当作失败', async () => {
   }
 })
 
-test('notifier 在 turn/end 发送 @all + 卡片，取消轮次静默', async () => {
+test('notifier 在 turn/end 只发一张含 @all 的卡片，取消轮次静默', async () => {
   const fake = installFetch(async () => new Response(JSON.stringify({ code: 0 }), { status: 200 }))
   const calls = []
   const notifier = createNotifier({
@@ -94,13 +94,18 @@ test('notifier 在 turn/end 发送 @all + 卡片，取消轮次静默', async ()
     await notifier.onSessionEvent(session, { type: 'assistant/message', data: { message: { content: [{ type: 'text', text: '任务完成' }] } } })
     await notifier.onSessionEvent(session, { type: 'turn/end', data: { reason: { kind: 'completed' } } })
     await new Promise((resolve) => setTimeout(resolve, 20))
-    assert.ok(calls.includes('at-all-sent'))
-    assert.ok(calls.includes('card-sent'))
+    assert.deepEqual(calls, ['card-sent'])
+    assert.equal(fake.calls.length, 1)
+    const sent = JSON.parse(fake.calls[0].init.body)
+    assert.equal(sent.msg_type, 'interactive')
+    assert.match(sent.card.body.elements[0].content, /<at id=all>/)
 
     calls.length = 0
+    fake.calls.length = 0
     await notifier.onSessionEvent(session, { type: 'turn/end', data: { reason: { kind: 'cancelled' } } })
     await new Promise((resolve) => setTimeout(resolve, 20))
-    assert.ok(!calls.includes('card-sent'))
+    assert.deepEqual(calls, [])
+    assert.equal(fake.calls.length, 0)
   } finally {
     fake.restore()
   }
