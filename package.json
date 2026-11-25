@@ -1,6 +1,6 @@
 {
   "name": "dsh-feishu-mcp",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "DSH 任务结束时向飞书自定义机器人 webhook 推送卡片强提醒。",
   "license": "MIT",
   "meta": {
