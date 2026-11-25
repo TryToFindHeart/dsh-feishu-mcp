@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Feishu End Notification",
+    "description": "Push a reminder card to a Feishu custom bot webhook when a DSH turn ends."
+  }
+}

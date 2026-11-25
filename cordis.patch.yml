@@ -1,0 +1,6 @@
+# Bundle patch for dsh-feishu-mcp.
+# 只往插件树插入本插件一行，不改动任何既有配置。
+- insert:
+    - id: feishu-mcp
+      name: dsh-feishu-mcp
+      config: {}

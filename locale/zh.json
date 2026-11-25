@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "飞书结束通知",
+    "description": "任务结束后向飞书群机器人 webhook 推送卡片强提醒，支持 @all。"
+  }
+}

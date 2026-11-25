@@ -1,0 +1,63 @@
+{
+  "name": "dsh-feishu-mcp",
+  "version": "0.1.0",
+  "description": "DSH 任务结束时向飞书自定义机器人 webhook 推送卡片强提醒。",
+  "license": "MIT",
+  "meta": {
+    "title": "飞书结束通知",
+    "description": "任务结束后向飞书群发送卡片强提醒，支持 webhook 配置与 @all。"
+  },
+  "icon": "icon.svg",
+  "type": "module",
+  "main": "index.js",
+  "exports": {
+    ".": {
+      "default": "./index.js"
+    },
+    "./client": {
+      "default": "./client.js"
+    },
+    "./locale/*.json": "./locale/*.json",
+    "./icon": "./icon.svg",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "test": "node --test test/*.test.mjs",
+    "test:webhook": "node scripts/webhook-smoke.mjs"
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh-plugin",
+    "feishu",
+    "webhook",
+    "notification"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "immediately": true
+    }
+  },
+  "files": [
+    "index.js",
+    "client.js",
+    "lib",
+    "cordis.patch.yml",
+    "locale/*.json",
+    "icon.svg",
+    "README.md",
+    "README.en.md",
+    "docs/DETAIL.md",
+    "scripts/webhook-smoke.mjs",
+    "test/*.test.mjs"
+  ],
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "~4.0.5"
+  }
+}
