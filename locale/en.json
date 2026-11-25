@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "Feishu Notify & Inbound",
-    "description": "Turn-end card reminders plus forwarding Feishu private messages into DSH."
+    "title": "Feishu Notify & Inbound (Full)",
+    "description": "Turn-end cards, scan-to-create app, private-chat control, approval/question cards, typing reactions, permission modes and session routing."
   }
 }

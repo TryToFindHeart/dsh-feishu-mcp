@@ -1,70 +1,44 @@
-# 飞书通知与私聊入站 · 插件详情
+# 设计细节
 
-## 解决什么
+## 模块划分
 
-DSH 在后台跑完一轮任务后，用户不一定盯着界面；同时用户也希望能在飞书私聊里直接给 DSH 派活，而不用切回电脑。插件把这两件事接起来：结果以卡片推到群里做强提醒，私聊消息则作为用户输入送进 DSH 会话。
+- `index.js`：Host 装配。持有状态、注册 `connection.fetch` 精确路由、装配 gateway / inbound / notifier / answers / permissions / sessions，并监听 `session/event`。
+- `client.js`：设置页。只通过同源 `/api/feishu-mcp/*` 与 Host 通信，不接触密钥原文。
+- `lib/state.js`：`$DSH_HOME/dsh-feishu-mcp/state.json`，`0600` + 原子替换；`publicState()` 只回掩码。
+- `lib/webhook.js`、`lib/card.js`：群 webhook 出站，Card 2.0 构造与分页。
+- `lib/feishu.js`：租户 token、机器人信息、应用消息、 reactions、卡片更新、扫码注册等飞书 API。
+- `lib/gateway-full.js`：`WSClient` 长连接；配置变化时重连。
+- `lib/inbound-full.js`：私聊消息解析、去重、白名单、命令、会话路由、`sessionController.prompt`。
+- `lib/notify-full.js`：`turn/end` 结果卡片、Typing 反应清理、失败 CrossMark、私聊回执。
+- `lib/answers.js`：审批 / 提问卡片与按钮回调。
+- `lib/permissions.js`：四种权限模式。
+- `lib/sessions.js`、`lib/captures.js`、`lib/labels.js`、`lib/restart.js`、`lib/service.js`：会话绑定、消息捕获、标签、重启与服务管理。
 
-## 出站：为什么用自定义机器人 webhook
+原有 `lib/inbound.js`、`lib/notifier.js`、`lib/gateway.js` 保留用于现有单测；正式装配使用 `*-full.js` 版本。
 
-出站只需要一个 URL，不需要公网回调、不需要应用凭证，实现和运维成本最低。webhook 本身即为密钥，因此：
+## 一次飞书私聊的生命周期
 
-- 不写进 `cordis.patch.yml` 或普通 Config；
-- 不回传浏览器原文，只回末 4 位掩码；
-- 落盘到 `~/.dsh/dsh-feishu-mcp/state.json`，写入时 0600 + 原子替换。
+1. 用户私聊机器人 → 飞书通过长连接推送 `im.message.receive_v1`。
+2. `inbound-full.js` 过滤机器人消息、校验白名单、按 `message_id` 去重。
+3. 解析 `/help`、`/sessions`、`/resume`、`/new`、`/queue`、`/permission`、`/stop` 等命令；普通文本走 `sessionController.prompt`。
+4. 忙时默认 `steer`（插话引导当前轮），显式 `/queue` 才 `queue`。
+5. `pending` 记录 `{sessionId -> chatId}`；`turn/end` 时 notifier 先 `takeReply`，有回执就只回原私聊，否则走群 webhook。
+6. Typing 反应在收到消息时添加，结束时移除；失败改为 CrossMark。
 
-事件只消费 durable 事件：
+## 审批与提问
 
-| 事件 | 作用 |
-| --- | --- |
-| `turn/start` | 记录开始时间 |
-| `assistant/message` | 记录最后一段助手正文 |
-| `turn/end` | 汇总并投递 |
+- `answers.js` 监听 `approval/request`、`user-questions/request`，通过 `sendCard` 推送卡片。
+- 审批卡按钮：`allow_once` / `deny`；提问卡把单选题变成按钮，另有「输入你的答案」让文本回复进入 `captures`。
+- 卡片回调通过长连接的 `card.action.trigger` 事件回传（参考实现同款）。
 
-取消的轮次不播报，子代理轮次跳过，由父会话统一汇报。
+## 渲染
 
-## 入站：为什么用长连接
+- 飞书应用消息使用 `markdown.js` 的 `buildContentCards`：Card 2.0，原生 table，代码围栏保护，超长按 `CARD_CHAR_BUDGET=6000` 分页，最多 6 张。
+- 群 webhook 使用 `card.js`：相同卡片语义，但表格默认用 markdown table，避免部分自定义机器人客户端拒绝原生 table 元素。
 
-飞书自定义机器人 webhook 只能发不能收。要接收私聊必须用企业自建应用机器人。传统 Webhook 事件订阅需要公网 HTTPS 地址；飞书 Node SDK 的 `WSClient` 支持长连接，由客户端主动连出去，所以本地 DSH 不需要暴露端口或配置域名。
+## 安全边界
 
-`lib/gateway.js` 负责生命周期：配置变化时按 `domain/appId/appSecret/enableInbound` 生成 key，key 变了就关闭旧连接再启动新连接；启动失败不缓存为“运行中”，下次配置保存会重试。
-
-## 入站消息如何进 DSH
-
-1. `im.message.receive_v1` 事件进入 `lib/inbound.js`。
-2. 过滤 bot / app 发送者，只接受 `chat_type === 'p2p'`。
-3. 用 `message_id` 去重（最多记 500 条），再用同一个 id 作为 `requestId` 提交，Feishu 重发也只算一次。
-4. 白名单为空时认领第一个私聊者，之后锁定；避免把 DSH 暴露给任意飞书用户。
-5. `sessionMode` 决定用哪个会话：`perChat` 每个私聊一个会话，`fixed` 用 `homeChatId` 绑定，`active` 跟随 DSH 当前会话。
-6. `sessionController.prompt({ requestId, sessionId, mode, content })` 把文本送进去；忙时默认 `steer` 插话，显式 `/queue` 才排队。
-7. `pending.set(sessionId, { chatId, messageId })` 记住等待回执的对话。
-
-## 结果回哪
-
-`lib/notifier.js` 在 `turn/end` 时先通过 `takeReply(sessionId)` 取出等待中的飞书回执：
-
-- 有回执且开启 `inboundReply`：结果卡片通过应用机器人 API 回到原私聊，不再重复发 webhook。
-- 没有回执：走原来的群 webhook，保持强提醒语义。
-- 取消 / 子代理轮次：消费掉悬挂回执但不播报。
-
-这样既能在飞书里连续对话，又不会同一轮收到两张卡。
-
-## 设置页与路由
-
-通过 `settings.section` 插槽注册到侧栏 Settings。页面只通过同源 Fetch 调用 Host 精确路由：
-
-| 路由 | 用途 |
-| --- | --- |
-| `GET /state` | 读取脱敏后的配置 |
-| `POST /config` | 保存全部配置，凭据留空表示保留 |
-| `POST /verify` | 校验 App ID / Secret 并读取机器人身份，随后重连 |
-| `POST /test` | 发送群 webhook 测试卡片 |
-| `POST /disconnect` | 清除应用凭据，保留 webhook |
-| `POST /clear` | 清空全部配置并停止长连接 |
-
-App Secret 只写不回读；浏览器从不接触应用 token。
-
-## 当前边界
-
-- 只处理私聊文本；群聊、图片/文件消息不转发。
-- 不做流式回写；只在轮次结束时发一条最终结果。
-- 长连接依赖 `@larksuiteoapi/node-sdk`，安装/更新插件后需在插件目录 `npm install`。
+- Webhook 与 App Secret 都不进 cordis 配置，不进浏览器；`publicState()` 仅回末 4 位掩码和布尔值。
+- 状态文件 `0600`，目录 `0700`；写入先写临时文件再 `rename`。
+- 入站只接受白名单用户（为空时认领首个私聊用户），只处理 `p2p`，忽略群聊与机器人消息。
+- 权限模式按飞书对话隔离，`auto` 模式优先使用宿主的 Auto Review。

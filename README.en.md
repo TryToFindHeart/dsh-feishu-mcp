@@ -1,51 +1,37 @@
 # dsh-feishu-mcp
 
-A DSH plugin for **turn-end card reminders** and **forwarding Feishu private messages into DSH**.
+A full-featured Feishu plugin for DeepSeek Harness: turn-end webhook reminders plus a Feishu self-built app bot for private-chat control. Merged from `dsh-plugin-feishu-im` while keeping the original group webhook path.
 
 ## Features
 
-### Outbound (custom-bot webhook)
-
-- Sends a result card on `turn/end` when a turn is completed, errors, or hits max-tokens.
-- Stays silent for cancelled turns and subagent turns.
-- Optional `@all` mention inside the card only; no extra text message.
-- Block-based pagination (max 6 cards) and Markdown tables for older clients.
-- Falls back to plain text if a card is rejected.
-
-### Inbound (self-built Feishu app bot)
-
-- Subscribes to `im.message.receive_v1` over the Node SDK WebSocket long connection: **no public IP, domain, or callback URL required**.
-- Handles private `p2p` chats only; deduplicates by `message_id` so Feishu retries do not re-enter DSH.
-- Binds one Feishu chat to one DSH session, with session list, resume, new, stop, steer and queue commands.
-- Turns started from a private chat reply in that chat; otherwise the group webhook reminder is used.
-- App Secret is write-only; the browser only sees a masked value and the state file is mode 0600.
+- Scan-to-create a dedicated Feishu app, or enter App ID / App Secret manually.
+- Turn-end cards with conclusion, duration and failure reason; `@all` reminder before the card.
+- Approval cards with "allow once / deny"; question cards with option buttons and free-text answer.
+- Typing reaction while processing, removed on success, replaced by CrossMark on failure.
+- Private messages drive DSH sessions and the result returns to the same chat.
+- Busy turns default to `steer` (inline guidance); `/queue` switches to queued delivery.
+- Session commands: `/sessions`, `/resume`, `/new`, `/current`, `/id`.
+- Four permission modes: readonly / workspace / Auto Review / full.
+- Card 2.0 rendering with native tables for app messages and markdown tables for webhook; long content is paginated.
 
 ## Prerequisites
 
-Create a self-built app in the Feishu Open Platform:
+1. Create an enterprise self-built app in the Feishu Open Platform and enable the bot capability.
+2. Grant `im:message.p2p_msg:readonly` (and `im:message` for sending messages).
+3. Under event subscriptions, choose "use long connection to receive events" and add `im.message.receive_v1`.
+4. Publish a version so permissions and events take effect.
+5. Create a custom bot webhook in a Feishu group for outbound strong reminders.
 
-1. Create the app and enable the bot capability.
-2. Grant `im:message.p2p_msg:readonly`.
-3. Subscribe to `im.message.receive_v1` using **long connection** mode.
-4. Publish a release and copy the App ID / App Secret into the plugin settings.
-5. Click "Verify app" in settings to confirm the bot identity.
+## Settings
 
-## Install / update
+Open the "飞书通知" section in DSH settings. Webhook, scan-to-create, manual credentials, push toggles, session location, permissions, inbound toggles and service management are all there. Secrets are stored in `$DSH_HOME/dsh-feishu-mcp/state.json` with mode `0600`; the browser only ever sees masked tails.
 
-```pwsh
-npm install
-plugin_manager install_bundle(target = <absolute path to this directory>)
-```
+## Routes
 
-Then open Settings → Feishu Notify in the DSH sidebar. Config changes reconnect the long connection automatically.
+`GET /api/feishu-mcp/state`, `POST /api/feishu-mcp/{onboarding/begin,onboarding/poll,onboarding/cancel,credentials,prefs,verify,test,disconnect,clear}`, `GET|POST /api/feishu-mcp/service`.
 
-## Test
+## Status
 
-```pwsh
-npm test
-node scripts/webhook-smoke.mjs --url https://open.feishu.cn/open-apis/bot/v2/hook/...
-```
-
-## Security
-
-The webhook URL and App Secret are stored only in `~/.dsh/dsh-feishu-mcp/state.json` (mode 0600), never in `cordis.patch.yml`, and never returned in plaintext to the browser.
+- `npm test`: 12/12 passing; `node --check` clean.
+- Outbound webhook verified against a real Feishu bot (`StatusCode:0`, `code:0`).
+- Inbound long connection is implemented and unit-tested; real verification needs your Feishu App ID / App Secret and event subscription.
