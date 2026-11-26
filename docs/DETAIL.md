@@ -28,7 +28,7 @@
 
 1. 用户私聊机器人 → 飞书通过长连接推送 `FSMCP_EVENT_MESSAGE_RECEIVE` 对应的消息事件。
 2. `inbound-full.js` 过滤机器人消息、校验白名单、按 `message_id` 去重。
-3. 解析 `/help`、`/sessions`、`/resume`、`/new`、`/queue`、`/permission`、`/stop` 等命令；普通文本走 `sessionController.prompt`。发送「切换会话」时直接返回按钮卡片，按钮 `value.k='resume'` 复用既有会话切换回调，不进入 prompt，也不影响其他命令。
+3. 解析 `/help`、`/sessions`、`/resume`、`/new`、`/queue`、`/permission`、`/stop` 等命令；普通文本走 `sessionController.prompt`。发送「切换会话」时直接返回按 `1. 会话标题` 序号排列、每个按钮独占一行的卡片，按钮 `value.k='resume'` 复用既有会话切换回调，不进入 prompt，也不影响其他命令；数量默认不限（硬上限 20），归档会话由 `sessions.list` 排除。
 4. 忙时默认 `steer`（插话引导当前轮），显式 `/queue` 才 `queue`。
 5. `pending` 记录 `{sessionId -> chatId}`；`turn/end` 时 notifier 先 `takeReply`，有回执就只回原私聊。
 6. Typing 反应在收到消息时添加，结束时移除；失败改为 CrossMark。

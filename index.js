@@ -378,7 +378,7 @@ export function apply(ctx) {
       }
       if (body.sessionSwitchLimit !== undefined) {
         const limit = Number(body.sessionSwitchLimit)
-        if (!Number.isFinite(limit) || limit < 1 || limit > 10) throw new Error('切换会话展示数量需要是 1–10 之间的数字')
+        if (!Number.isFinite(limit) || limit < 0 || limit > 20) throw new Error('切换会话展示数量需要是 0–20 之间的数字（0 表示不限）')
         next.sessionSwitchLimit = Math.round(limit)
       }
       if (body.allowedOpenIds !== undefined) next.allowedOpenIds = asStringList(body.allowedOpenIds)

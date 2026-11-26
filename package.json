@@ -1,6 +1,6 @@
 {
   "name": "dsh-feishu-mcp",
-  "version": "0.3.11",
+  "version": "0.3.12",
   "description": "DeepSeek Harness 飞书通知与指挥插件：群 Webhook 强提醒、扫码创建应用、私聊指挥、审批/提问卡片、会话绑定与静默跟随。",
   "license": "MIT",
   "meta": {

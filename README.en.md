@@ -18,7 +18,7 @@ The plugin has two separate channels with separate test buttons:
 - Private messages drive DSH sessions and the result returns to the same chat.
 - Busy turns default to `steer` (inline guidance); `/queue` switches to queued delivery.
 - Session commands: `/sessions`, `/resume <no|id|title>`, `/new`, `/current`, `/id`.
-- Send "切换会话" in a Feishu chat to get a card of session buttons; tapping one switches immediately. The number of buttons is configurable (1–10).
+- Send "切换会话" in a Feishu chat to get a numbered, one-button-per-row session card; tapping one switches immediately. Unlimited by default, capped at 20; archived sessions are excluded.
 - Follow-notice session switching: when Webhook is off, the Feishu chat that receives a notice is rebound to the notified session immediately, so replies naturally continue in the right session.
 - Four permission modes: readonly / workspace / Auto Review / full, scoped per Feishu chat.
 - Session location is configurable; the default workspace is `飞书 DSH` under `~/dsh-feishu-mcp`.
@@ -56,7 +56,7 @@ Secrets are stored in `$DSH_HOME/dsh-feishu-mcp/state.json` with mode `0600`; th
 
 ## Status
 
-- `npm test`: 20/20 passing; 28 JS files pass `node --check`.
+- `npm test`: 22/22 passing; 29 JS files pass `node --check`.
 - Outbound webhook verified against a real Feishu bot (`StatusCode:0`, `code:0`).
 - App bot connection and test message verified in the UI.
 - Follow-notice switching verified with a real notice and `state.json` changes.

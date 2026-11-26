@@ -13,7 +13,7 @@
   var API = '/api/feishu-mcp';
   // Bumped on every installed build: the page prints it, so a stale artifact is
   // visible instead of being mistaken for a code bug.
-  var BUILD = '0.3.11';
+  var BUILD = '0.3.12';
 
   // Kept in sync with lib/permissions.js; the Host validates whatever is saved.
   var PERMISSION_ORDER = ['readonly', 'workspace', 'auto', 'full'];
@@ -127,8 +127,8 @@
       enableWebhook: next.enableWebhook !== false,
       followNoticeSwitch: next.followNoticeSwitch !== false,
       sessionSwitchLimit: Number.isFinite(Number(next.sessionSwitchLimit))
-        ? Math.max(1, Math.min(10, Math.round(Number(next.sessionSwitchLimit))))
-        : 5,
+        ? Math.max(0, Math.min(20, Math.round(Number(next.sessionSwitchLimit))))
+        : 0,
       allowedOpenIds: Array.isArray(next.allowedOpenIds) ? next.allowedOpenIds : [],
       chatSessions: next.chatSessions && typeof next.chatSessions === 'object' ? next.chatSessions : {},
       chatPermissions: next.chatPermissions && typeof next.chatPermissions === 'object' ? next.chatPermissions : {},
@@ -434,7 +434,7 @@
       var maxCharsDraftState = useState(String(state.maxChars || 1200));
       var maxCharsDraft = maxCharsDraftState[0];
       var setMaxCharsDraft = maxCharsDraftState[1];
-      var sessionLimitDraftState = useState(String(state.sessionSwitchLimit || 5));
+      var sessionLimitDraftState = useState(String(state.sessionSwitchLimit || 0));
       var sessionLimitDraft = sessionLimitDraftState[0];
       var setSessionLimitDraft = sessionLimitDraftState[1];
 
@@ -754,14 +754,14 @@
                   onClick: function () { savePrefs({ sessionMode: mode }); },
                 }, mode);
               })))),
-          h(Field, { label: '切换会话展示数量', hint: '在飞书里发「切换会话」时，返回多少个会话按钮；1–10，默认 5。' },
+          h(Field, { label: '切换会话展示数量', hint: '在飞书里发「切换会话」时返回多少个会话按钮；0 表示不限（最多 20），默认 0。' },
             h('input', {
-              className: 'fsmcp-input', type: 'number', min: 1, max: 10, step: 1,
+              className: 'fsmcp-input', type: 'number', min: 0, max: 20, step: 1,
               value: sessionLimitDraft,
               onChange: function (event) { setSessionLimitDraft(event.target.value); },
               onBlur: function () {
                 var value = Math.round(Number(sessionLimitDraft));
-                if (isFinite(value) && value >= 1 && value <= 10 && value !== state.sessionSwitchLimit) {
+                if (isFinite(value) && value >= 0 && value <= 20 && value !== state.sessionSwitchLimit) {
                   savePrefs({ sessionSwitchLimit: value });
                 }
               },
