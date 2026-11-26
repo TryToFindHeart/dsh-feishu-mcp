@@ -372,6 +372,7 @@ export function apply(ctx) {
       }
       if (body.enableInbound !== undefined) next.enableInbound = body.enableInbound === true
       if (body.inboundReply !== undefined) next.inboundReply = body.inboundReply !== false
+      if (body.followNoticeSwitch !== undefined) next.followNoticeSwitch = body.followNoticeSwitch !== false
       if (body.sessionMode !== undefined) {
         next.sessionMode = ['fixed', 'perChat', 'active'].includes(body.sessionMode) ? body.sessionMode : 'perChat'
       }
@@ -579,6 +580,7 @@ export function apply(ctx) {
   const gateway = createGateway({ inbound, cardAction: (data) => answers.handleCardAction(data), log: warn, trace })
   const notifier = createNotifier({
     readState,
+    writeState,
     log: warn,
     trace,
     describe,

@@ -272,3 +272,44 @@ test('关闭 Webhook 后普通轮次由应用机器人发回绑定会话并携�
     fake.restore()
   }
 })
+
+test('关闭 Webhook 的普通轮次会记下通知所属会话，供下次静默跟随', async () => {
+  const fake = installFetch(async (url) => {
+    if (String(url).includes('tenant_access_token')) {
+      return new Response(JSON.stringify({ code: 0, tenant_access_token: 't-token' }), { status: 200 })
+    }
+    return new Response(JSON.stringify({ code: 0, data: { message_id: 'om_sent' } }), { status: 200 })
+  })
+  const state = {
+    ...baseState,
+    webhookUrl: '',
+    enableWebhook: false,
+    followNoticeSwitch: true,
+    appId: 'cli_test',
+    appSecret: 'secret',
+    ownerOpenId: 'ou_test',
+    notify: { turnEnd: true, approval: true, question: true },
+  }
+  const writes = []
+  const notifier = createFullNotifier({
+    readState: async () => state,
+    writeState: async (next) => { writes.push(next); return next },
+    log() {},
+    trace() {},
+    takeReply() { return null },
+    takeTyping() { return null },
+    chatOfSession: async () => ({ chatId: 'oc_bound' }),
+  })
+  const session = { id: 'session-notice', header: { cwd: '/workspace/demo' } }
+  try {
+    await notifier.onSessionEvent(session, { type: 'turn/start' })
+    await notifier.onSessionEvent(session, { type: 'assistant/message', data: { message: { content: [{ type: 'text', text: '任务完成' }] } } })
+    await notifier.onSessionEvent(session, { type: 'turn/end', data: { reason: { kind: 'completed' } } })
+    await new Promise((resolve) => setTimeout(resolve, 30))
+    assert.equal(writes.length, 1)
+    assert.equal(writes[0].lastNoticeSessionId, 'session-notice')
+    assert.ok(writes[0].lastNoticeAt > 0)
+  } finally {
+    fake.restore()
+  }
+})

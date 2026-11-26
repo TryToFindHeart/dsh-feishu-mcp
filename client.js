@@ -13,7 +13,7 @@
   var API = '/api/feishu-mcp';
   // Bumped on every installed build: the page prints it, so a stale artifact is
   // visible instead of being mistaken for a code bug.
-  var BUILD = '0.3.7';
+  var BUILD = '0.3.8';
 
   // Kept in sync with lib/permissions.js; the Host validates whatever is saved.
   var PERMISSION_ORDER = ['readonly', 'workspace', 'auto', 'full'];
@@ -125,6 +125,7 @@
         question: notify.question !== false,
       },
       enableWebhook: next.enableWebhook !== false,
+      followNoticeSwitch: next.followNoticeSwitch !== false,
       allowedOpenIds: Array.isArray(next.allowedOpenIds) ? next.allowedOpenIds : [],
       chatSessions: next.chatSessions && typeof next.chatSessions === 'object' ? next.chatSessions : {},
       chatPermissions: next.chatPermissions && typeof next.chatPermissions === 'object' ? next.chatPermissions : {},
@@ -729,6 +730,11 @@
             h(Switch, {
               label: '结果回原私聊', checked: state.inboundReply !== false,
               onChange: function () { savePrefs({ inboundReply: state.inboundReply === false }); },
+            })),
+          h(Row, { label: '跟随通知切换会话', hint: '关闭 Webhook 后，在应用里回复通知时静默切到通知所属会话，保持聊天连续。' },
+            h(Switch, {
+              label: '跟随通知切换会话', checked: state.followNoticeSwitch !== false,
+              onChange: function () { savePrefs({ followNoticeSwitch: state.followNoticeSwitch === false }); },
             })),
           h(Field, { label: '会话定位方式', hint: 'perChat：每个飞书私聊绑定一个会话；fixed：固定会话；active：当前活跃会话。' },
             h('div', { className: 'fsmcp-row fsmcp-wrap' },
