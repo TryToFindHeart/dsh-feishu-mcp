@@ -13,7 +13,7 @@
 - `lib/answers.js`：审批 / 提问卡片与按钮回调。
 - `lib/permissions.js`：四种权限模式。
 - `lib/sessions.js`、`lib/captures.js`、`lib/labels.js`、`lib/restart.js`、`lib/service.js`：会话绑定、消息捕获、标签、重启与服务管理。
-- `lib/constants.js`：统一的 `FSMCP_*` 自有常量；飞书平台要求的官方权限与事件标识只在此处映射，业务代码和文档不散写官方前缀。
+- `lib/constants.js`：统一的 `FSMCP_*` 自有常量；飞书平台要求的官方权限与事件标识只在此处映射，业务代码和文档不散写官方前缀。当前常量：`FSMCP_SCOPE_P2P_READ`（接收私聊）、`FSMCP_SCOPE_MESSAGE_SEND`（发送消息）、`FSMCP_SCOPE_CHAT_READ`（读取机器人所在会话）、`FSMCP_SCOPE_RESOURCE_READ`（下载消息图片等资源）、`FSMCP_EVENT_MESSAGE_RECEIVE`（私聊事件）、`FSMCP_EVENT_CARD_ACTION`（卡片回传）。
 
 `lib/inbound.js`、`lib/notifier.js`、`lib/gateway.js` 是早期通道实现，保留给原有单测；正式装配使用 `*-full.js` 版本。
 

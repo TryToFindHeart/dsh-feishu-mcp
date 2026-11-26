@@ -41,7 +41,7 @@ DeepSeek Harness 的飞书通知与指挥插件。把会话进展推送到飞书
 ## 飞书前置条件
 
 1. 在飞书开放平台创建企业自建应用，开启「机器人」能力。
-2. 开通私聊消息接收权限；代码里统一引用自有常量 `FSMCP_SCOPE_P2P_READ`，主动发消息权限对应 `FSMCP_SCOPE_MESSAGE_SEND`。
+2. 开通私聊消息接收、发送消息、读取机器人所在会话、下载消息资源等权限；代码里统一引用自有常量 `FSMCP_SCOPE_P2P_READ`、`FSMCP_SCOPE_MESSAGE_SEND`、`FSMCP_SCOPE_CHAT_READ`、`FSMCP_SCOPE_RESOURCE_READ`，不在业务代码和文档中散写官方前缀。
 3. 在「事件订阅」中选择 **使用长连接接收事件**，添加消息接收事件；代码里统一引用自有常量 `FSMCP_EVENT_MESSAGE_RECEIVE`。长连接无需公网 IP、域名或回调白名单。
 4. 发布应用版本，让权限与事件订阅生效。
 5. 群 Webhook 强提醒另外需要一个自定义机器人地址（群设置 → 机器人 → 添加自定义机器人）。
