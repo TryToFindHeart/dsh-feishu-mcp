@@ -2,6 +2,8 @@
 
 DeepSeek Harness 的飞书通知与指挥插件。把会话进展推送到飞书，也能在飞书里直接给 DSH 下达指令；所有消息都经过 DSH 处理后再回复。
 
+[![DSH](https://img.shields.io/badge/DSH-DeepSeek%20Harness-blue?labelColor=555555&color=1f6feb)](https://github.com/deepseek-ai/deepseek-harness) [![Node.js](https://img.shields.io/badge/Node.js-22%2B-blue?labelColor=555555&color=1f6feb)](https://nodejs.org/) ![JavaScript](https://img.shields.io/badge/JavaScript-ESM-blue?labelColor=555555&color=6f42c1) ![Cordis](https://img.shields.io/badge/Cordis-plugin-orange?labelColor=555555&color=e3632d) ![tests](https://img.shields.io/badge/tests-31%2F31-green?labelColor=555555&color=2ea043) ![license](https://img.shields.io/badge/license-MIT-green?labelColor=555555&color=2ea043)
+
 插件同时支持两条通道，并且分开测试、互不混淆：
 
 - **群 Webhook 强提醒**：通过自定义机器人 webhook 把每轮结果推送到群里，支持 `@all`。（配置简单，仅有基础通知功能）

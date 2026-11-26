@@ -2,6 +2,8 @@
 
 A Feishu notification and control plugin for DeepSeek Harness. It pushes session progress to Feishu and lets you drive DSH from a Feishu chat with text, images or files; every message is processed by DSH before it is returned.
 
+[![DSH](https://img.shields.io/badge/DSH-DeepSeek%20Harness-blue?labelColor=555555&color=1f6feb)](https://github.com/deepseek-ai/deepseek-harness) [![Node.js](https://img.shields.io/badge/Node.js-22%2B-blue?labelColor=555555&color=1f6feb)](https://nodejs.org/) ![JavaScript](https://img.shields.io/badge/JavaScript-ESM-blue?labelColor=555555&color=6f42c1) ![Cordis](https://img.shields.io/badge/Cordis-plugin-orange?labelColor=555555&color=e3632d) ![tests](https://img.shields.io/badge/tests-31%2F31-green?labelColor=555555&color=2ea043) ![license](https://img.shields.io/badge/license-MIT-green?labelColor=555555&color=2ea043)
+
 The plugin has two separate channels with separate test buttons:
 
 - **Group webhook reminders**: a custom-bot webhook pushes each turn result to a group, with optional `@all`.
