@@ -1,6 +1,6 @@
 # dsh-feishu-mcp
 
-A Feishu notification and control plugin for DeepSeek Harness. It pushes session progress to Feishu and lets you drive DSH from a Feishu chat; every message is processed by DSH before it is returned.
+A Feishu notification and control plugin for DeepSeek Harness. It pushes session progress to Feishu and lets you drive DSH from a Feishu chat with text or images; every message is processed by DSH before it is returned.
 
 The plugin has two separate channels with separate test buttons:
 
@@ -56,7 +56,7 @@ Secrets are stored in `$DSH_HOME/dsh-feishu-mcp/state.json` with mode `0600`; th
 
 ## Status
 
-- `npm test`: 22/22 passing; 29 JS files pass `node --check`.
+- `npm test`: 24/24 passing; 30 JS files pass `node --check`.
 - Outbound webhook verified against a real Feishu bot (`StatusCode:0`, `code:0`).
 - App bot connection and test message verified in the UI.
 - Follow-notice switching verified with a real notice and `state.json` changes.
