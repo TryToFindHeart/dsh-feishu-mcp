@@ -87,7 +87,7 @@
     '.fsmcp-warn{border:1px solid var(--dsw-alias-state-warn-primary,#b54708);border-radius:10px;padding:9px 12px;font-size:12px;line-height:1.55;color:var(--dsw-alias-state-warn-primary,#b54708);background:color-mix(in srgb,var(--dsw-alias-state-warn-primary,#b54708) 8%,transparent);}',
     '.fsmcp-help{position:relative;display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;flex:none;margin-left:6px;vertical-align:middle;border-radius:50%;border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-secondary);font-size:11px;font-weight:600;line-height:1;cursor:help;}',
     '.fsmcp-help:hover,.fsmcp-help:focus{color:var(--dsw-alias-brand-primary);border-color:var(--dsw-alias-brand-primary);outline:none;}',
-    '.fsmcp-help-tip{position:absolute;left:50%;top:calc(100% + 8px);transform:translateX(-50%);width:300px;max-width:min(320px,80vw);box-sizing:border-box;padding:10px 12px;border-radius:8px;border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1,#fff);background-color:color-mix(in srgb,var(--dsw-alias-bg-layer-1,#fff) 96%,#fff);color:var(--dsw-alias-label-primary,#1a1a1a);box-shadow:0 8px 24px rgba(0,0,0,.14);font-size:12px;line-height:1.6;font-weight:400;white-space:pre-line;text-align:left;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .12s ease;z-index:20;}',
+    '.fsmcp-help-tip{position:absolute;left:50%;top:calc(100% + 12px);transform:translateX(-50%);width:300px;max-width:min(320px,80vw);box-sizing:border-box;padding:10px 12px;border-radius:8px;border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1,#fff);background-color:color-mix(in srgb,var(--dsw-alias-bg-layer-1,#fff) 96%,#fff);backdrop-filter:blur(6px);color:var(--dsw-alias-label-primary,#1a1a1a);box-shadow:0 8px 24px rgba(0,0,0,.14);font-size:12px;line-height:1.6;font-weight:400;white-space:pre-line;text-align:left;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .12s ease;z-index:20;}',
     '.fsmcp-help:hover .fsmcp-help-tip,.fsmcp-help:focus .fsmcp-help-tip{opacity:1;visibility:visible;}',
     '.fsmcp-help-tip::after{content:"";position:absolute;left:50%;bottom:100%;transform:translateX(-50%);border:6px solid transparent;border-bottom-color:var(--dsw-alias-border-l1);}',
     '.fsmcp-help-tip-left{left:0;transform:none;}',
@@ -648,7 +648,7 @@
               run('verify', function () { return api('/verify', { method: 'POST', body: {} }); }, '凭据有效。');
             } }, busy === 'verify' ? '校验中…' : '重新校验'),
             h(Button, { disabled: busy !== '', onClick: function () { if (onOnboard) onOnboard(); } }, '扫码创建 / 重新授权'),
-            h(Help, { label: '扫码说明', text: SCAN_HELP }),
+            h(Help, { label: '扫码说明', text: SCAN_HELP, align: 'right' }),
             h(Button, { variant: 'danger', disabled: busy !== '', onClick: function () {
               if (typeof window !== 'undefined' && !window.confirm('断开后 DSH 不再向飞书推送消息，凭据会从本机删除。继续？')) return;
               run('disconnect', function () { return api('/disconnect', { method: 'POST', body: {} }); });
