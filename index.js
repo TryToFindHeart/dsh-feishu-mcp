@@ -621,6 +621,7 @@ export function apply(ctx) {
     log: warn,
     trace,
     describe,
+    models,
     takeReply: inbound.takeReply,
     takeTyping: inbound.takeTyping,
     chatOfSession: sessions.chatOfSession,

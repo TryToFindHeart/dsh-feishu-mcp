@@ -402,6 +402,39 @@ test('turn/end 即使用 cancelled 也会撤销 Typing 反应', async () => {
   }
 })
 
+test('每张通知卡片底部带当前模型小字', async () => {
+  const fake = installFetch(async () => new Response(JSON.stringify({ code: 0 }), { status: 200 }))
+  const state = {
+    webhookUrl: 'https://open.feishu.cn/open-apis/bot/v2/hook/test',
+    webhookAtAll: false,
+    notify: { turnEnd: true },
+    appId: '',
+    appSecret: '',
+  }
+  const notifier = createFullNotifier({
+    readState: async () => state,
+    log() {},
+    trace() {},
+    models: {
+      current: () => ({ provider: 'deepseek', model: 'deepseek-chat' }),
+      catalog: async () => undefined,
+    },
+  })
+  const session = { id: 'session-footer', header: { cwd: '/workspace/demo' } }
+  try {
+    await notifier.onSessionEvent(session, { type: 'turn/start' })
+    await notifier.onSessionEvent(session, { type: 'assistant/message', data: { message: { content: [{ type: 'text', text: '完成' }] } } })
+    await notifier.onSessionEvent(session, { type: 'turn/end', data: { reason: { kind: 'completed' } } })
+    await new Promise((resolve) => setTimeout(resolve, 30))
+    assert.equal(fake.calls.length, 1)
+    const sent = JSON.parse(fake.calls[0].init.body)
+    const footer = sent.card.body.elements.map((element) => element.content || '').join('\n')
+    assert.match(footer, /模型：deepseek\/deepseek-chat/)
+  } finally {
+    fake.restore()
+  }
+})
+
 test('createModels 从会话 agent 读取当前模型，modelLabel 显示可读名称', () => {
   const ctx = {
     get(name) {

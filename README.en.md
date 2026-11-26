@@ -11,7 +11,7 @@ The plugin has two separate channels with separate test buttons:
 
 - Turn-end cards with conclusion, duration and failure reason; cancelled and sub-agent turns stay silent.
 - Webhook toggle: enabled sends group cards only; disabled sends notifications through the app bot only. First-time app credentials default to webhook off and private-chat long-connection intake on, with a visible notice; later explicit choices always win.
-- Session model visibility and switching: a successful session switch shows the current model and warns about paid routes; send `/model` in Feishu for a button card that switches the session's model.
+- Session model visibility and switching: every reply and notification card carries the current model in a small grey footer and warns about paid routes; a successful session switch also shows it; send `/model` in Feishu for a button card that switches the session's model.
 - `@all` mention is embedded in the group card; no separate text message is sent; affects presentation, not whether a notice is sent.
 - Scan-to-create a dedicated Feishu app, or enter App ID / App Secret manually if your tenant disables device-code registration.
 - Approval cards with "allow once / deny"; question cards with option buttons and a free-text answer.
@@ -57,7 +57,7 @@ Secrets are stored in `$DSH_HOME/dsh-feishu-mcp/state.json` with mode `0600`; th
 
 ## Status
 
-- `npm test`: 23/23 passing; all JS/MJS files pass `node --check`.
+- `npm test`: 24/24 passing; all JS/MJS files pass `node --check`.
 - Outbound webhook verified against a real Feishu bot (`StatusCode:0`, `code:0`).
 - App bot connection and test message verified in the UI.
 - Follow-notice switching verified with a real notice and `state.json` changes.
