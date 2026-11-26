@@ -11,7 +11,7 @@ The plugin has two separate channels with separate test buttons:
 
 - Turn-end cards with conclusion, duration and failure reason; cancelled and sub-agent turns stay silent.
 - Webhook toggle: enabled sends group cards only; disabled sends notifications through the app bot only.
-- `@all` text before the group card; affects presentation, not whether a notice is sent.
+- `@all` mention is embedded in the group card; no separate text message is sent; affects presentation, not whether a notice is sent.
 - Scan-to-create a dedicated Feishu app, or enter App ID / App Secret manually if your tenant disables device-code registration.
 - Approval cards with "allow once / deny"; question cards with option buttons and a free-text answer.
 - Typing reaction while processing, removed on success and replaced by CrossMark on failure.
@@ -52,7 +52,7 @@ Secrets are stored in `$DSH_HOME/dsh-feishu-mcp/state.json` with mode `0600`; th
 
 ## Status
 
-- `npm test`: 18/18 passing; 21 JS files pass `node --check`.
+- `npm test`: 19/19 passing; 21 JS files pass `node --check`.
 - Outbound webhook verified against a real Feishu bot (`StatusCode:0`, `code:0`).
 - App bot connection and test message verified in the UI.
 - Inbound long connection is implemented and unit-tested; final live verification needs your Feishu App ID / App Secret and event subscription.
