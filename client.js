@@ -13,7 +13,7 @@
   var API = '/api/feishu-mcp';
   // Bumped on every installed build: the page prints it, so a stale artifact is
   // visible instead of being mistaken for a code bug.
-  var BUILD = '0.3.3';
+  var BUILD = '0.3.4';
 
   // Kept in sync with lib/permissions.js; the Host validates whatever is saved.
   var PERMISSION_ORDER = ['readonly', 'workspace', 'auto', 'full'];
@@ -95,10 +95,14 @@
     var text = await response.text();
     var data = {};
     if (text) {
-      try { data = JSON.parse(text); } catch (error) { throw new Error('服务返回了无法解析的响应（HTTP ' + response.status + '）'); }
+      try { data = JSON.parse(text); } catch (error) { data = {}; }
     }
     if (!response.ok) {
-      var failure = new Error(data.error || ('请求失败（HTTP ' + response.status + '）'));
+      var message = data.error || ('请求失败（HTTP ' + response.status + '）');
+      if (response.status === 404) {
+        message = '新版插件路由尚未加载：请完全退出 DSH 应用后重新启动，再打开此页面（HTTP 404）';
+      }
+      var failure = new Error(message);
       failure.status = response.status;
       throw failure;
     }
