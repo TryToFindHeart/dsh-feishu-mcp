@@ -828,7 +828,7 @@
           setError('');
           setShowOnboard(false);
           if (defaultChannelApplied) {
-            setPageNotice('已按应用机器人默认配置：关闭 Webhook 推送、开启飞书私聊长连接入站。如需改回，在下方开关里调整即可。');
+            setPageNotice('已套用应用机器人模板默认：关闭 Webhook 推送、开启私聊长连接入站，并设置 @all、会话数量、等待上限等与当前一致。密钥、白名单和会话绑定仍是你自己的，随时可在下方调整。');
           }
         };
         var hasApp = state.appConfigured === true || Boolean(state.appId && state.appSecretConfigured);

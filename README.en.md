@@ -2,7 +2,7 @@
 
 A Feishu notification and control plugin for DeepSeek Harness. It pushes session progress to Feishu and lets you drive DSH from a Feishu chat with text, images or files; every message is processed by DSH before it is returned.
 
-[![DSH](https://img.shields.io/badge/DSH-DeepSeek%20Harness-blue?labelColor=555555&color=1f6feb)](https://github.com/deepseek-ai/deepseek-harness) [![Node.js](https://img.shields.io/badge/Node.js-22%2B-blue?labelColor=555555&color=1f6feb)](https://nodejs.org/) ![JavaScript](https://img.shields.io/badge/JavaScript-ESM-blue?labelColor=555555&color=6f42c1) ![Cordis](https://img.shields.io/badge/Cordis-plugin-orange?labelColor=555555&color=e3632d) ![tests](https://img.shields.io/badge/tests-31%2F31-green?labelColor=555555&color=2ea043) ![license](https://img.shields.io/badge/license-MIT-green?labelColor=555555&color=2ea043)
+[![DSH](https://img.shields.io/badge/DSH-DeepSeek%20Harness-blue?labelColor=555555&color=1f6feb)](https://github.com/deepseek-ai/deepseek-harness) [![Node.js](https://img.shields.io/badge/Node.js-22%2B-blue?labelColor=555555&color=1f6feb)](https://nodejs.org/) ![JavaScript](https://img.shields.io/badge/JavaScript-ESM-blue?labelColor=555555&color=6f42c1) ![Cordis](https://img.shields.io/badge/Cordis-plugin-orange?labelColor=555555&color=e3632d) ![tests](https://img.shields.io/badge/tests-32%2F32-green?labelColor=555555&color=2ea043) ![license](https://img.shields.io/badge/license-MIT-green?labelColor=555555&color=2ea043)
 
 The plugin has two separate channels with separate test buttons:
 
@@ -12,7 +12,7 @@ The plugin has two separate channels with separate test buttons:
 ## Features
 
 - Turn-end cards with conclusion, duration and failure reason; cancelled and sub-agent turns stay silent.
-- Webhook toggle: enabled sends group cards only; disabled sends notifications through the app bot only. First-time app credentials default to webhook off and private-chat long-connection intake on, with a visible notice; later explicit choices always win.
+- Webhook toggle: enabled sends group cards only; disabled sends notifications through the app bot only. First-time app credentials apply a template default (webhook off, private-chat long-connection intake on, plus `@all`, session-switch limit and answer timeout preferences). Secrets, allowlists and session bindings stay yours; later explicit choices always win.
 - Session model visibility and switching: every reply and notification card carries the current model in a small grey footer and warns about paid routes; a successful session switch also shows it; send `/model` in Feishu for a button card that switches the session's model.
 - `@all` mention is embedded in the group card; no separate text message is sent; affects presentation, not whether a notice is sent.
 - Scan-to-create a dedicated Feishu app, or enter App ID / App Secret manually if your tenant disables device-code registration.

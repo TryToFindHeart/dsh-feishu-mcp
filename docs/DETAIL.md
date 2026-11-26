@@ -19,10 +19,12 @@
 
 ## 两条通道
 
-1. **群 Webhook**：监听 `session/event` 的 `turn/end`，只对 `completed` / `error` / `max-tokens` 播报；取消和子代理轮次静默。先发可选 `@all` 文本，再发结果卡片。
+1. **群 Webhook**：监听 `session/event` 的 `turn/end`，只对 `completed` / `error` / `max-tokens` 播报；取消和子代理轮次静默。`@all` 内嵌在卡片正文，不额外发文本消息。
 2. **飞书应用机器人**：`WSClient` 长连接订阅 `FSMCP_EVENT_MESSAGE_RECEIVE` 对应的飞书消息事件，无需公网回调地址。消息经白名单校验、按 `message_id` 去重后进入 DSH 会话；由飞书发起的轮次结束时只回原私聊，不再发群 webhook。
 
 两个测试入口分开：`/test` 只测群 Webhook，`/test-app` 只测应用机器人，避免一次点击收到两条消息。
+
+首次配置应用机器人（扫码或手动凭据）时，`lib/state.js` 的 `APP_SETUP_TEMPLATE` 会作为偏好模板套用：关闭 Webhook、开启私聊长连接入站，`@all` 内嵌卡片、会话切换按钮上限 10、等待上限 0，以及通知卡片标题、摘要长度、会话目录、默认权限等。模板只写偏好，不覆盖 webhook 原文、App Secret、管理员 open_id、白名单、会话绑定等身份数据；用户显式切换过通道或已套用过就不再改写。
 
 ## 一次飞书私聊的生命周期
 

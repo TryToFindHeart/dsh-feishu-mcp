@@ -45,7 +45,7 @@ import { createRestart } from './lib/restart.js'
 import * as service from './lib/service.js'
 import { createNotifier } from './lib/notify-full.js'
 import { qrSvgDataUrl } from './lib/qr.js'
-import { clearState, publicState, readState, writeState } from './lib/state.js'
+import { applyAppSetupTemplate, clearState, publicState, readState, writeState } from './lib/state.js'
 import { buildContentCards } from './lib/card.js'
 import { sendWebhookCard } from './lib/webhook.js'
 
@@ -217,19 +217,11 @@ export function apply(ctx) {
   }
 
   /**
-   * First-time app credentials flip the channel defaults: the app bot is now
-   * the primary path, so webhook reminders step aside and private-chat intake
-   * turns on. An explicit choice by the operator always wins.
+   * 首次配置应用机器人时套用模板默认值（应用优先 + 用户当前偏好）。
+   * 模板只改偏好开关，不碰身份、会话绑定和 webhook 原文；显式选择永远优先。
    */
   function applyAppChannelDefaults(previous) {
-    const firstApp = !previous.appId && !previous.appSecret
-    if (!firstApp || previous.channelChoiceExplicit || previous.channelDefaultsApplied) {
-      return { next: previous, applied: false }
-    }
-    return {
-      next: { ...previous, enableWebhook: false, enableInbound: true, channelDefaultsApplied: true },
-      applied: true,
-    }
+    return applyAppSetupTemplate(previous)
   }
 
   const handlers = {

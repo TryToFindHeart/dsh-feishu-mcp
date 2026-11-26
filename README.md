@@ -2,7 +2,7 @@
 
 DeepSeek Harness 的飞书通知与指挥插件。把会话进展推送到飞书，也能在飞书里直接给 DSH 下达指令；所有消息都经过 DSH 处理后再回复。
 
-[![DSH](https://img.shields.io/badge/DSH-DeepSeek%20Harness-blue?labelColor=555555&color=1f6feb)](https://github.com/deepseek-ai/deepseek-harness) [![Node.js](https://img.shields.io/badge/Node.js-22%2B-blue?labelColor=555555&color=1f6feb)](https://nodejs.org/) ![JavaScript](https://img.shields.io/badge/JavaScript-ESM-blue?labelColor=555555&color=6f42c1) ![Cordis](https://img.shields.io/badge/Cordis-plugin-orange?labelColor=555555&color=e3632d) ![tests](https://img.shields.io/badge/tests-31%2F31-green?labelColor=555555&color=2ea043) ![license](https://img.shields.io/badge/license-MIT-green?labelColor=555555&color=2ea043)
+[![DSH](https://img.shields.io/badge/DSH-DeepSeek%20Harness-blue?labelColor=555555&color=1f6feb)](https://github.com/deepseek-ai/deepseek-harness) [![Node.js](https://img.shields.io/badge/Node.js-22%2B-blue?labelColor=555555&color=1f6feb)](https://nodejs.org/) ![JavaScript](https://img.shields.io/badge/JavaScript-ESM-blue?labelColor=555555&color=6f42c1) ![Cordis](https://img.shields.io/badge/Cordis-plugin-orange?labelColor=555555&color=e3632d) ![tests](https://img.shields.io/badge/tests-32%2F32-green?labelColor=555555&color=2ea043) ![license](https://img.shields.io/badge/license-MIT-green?labelColor=555555&color=2ea043)
 
 插件同时支持两条通道，并且分开测试、互不混淆：
 
@@ -14,7 +14,7 @@ DeepSeek Harness 的飞书通知与指挥插件。把会话进展推送到飞书
 | 能力 | 说明 |
 | --- | --- |
 | 任务结束通知 | 每轮结束时推送卡片：结论、用时、失败原因；取消和子代理轮次静默 |
-| 双通道切换 | 「启用 Webhook 推送」开启走群卡片，关闭改由应用机器人发送；首次配置应用机器人时默认关闭 Webhook、开启私聊长连接入站，并在设置页提示，之后以用户显式选择为准 |
+| 双通道切换 | 「启用 Webhook 推送」开启走群卡片，关闭改由应用机器人发送；首次配置应用机器人时套用模板默认（关闭 Webhook、开启私聊长连接入站，并套用 `@all`、会话数量、等待上限等偏好），密钥、白名单和会话绑定仍是你自己的，之后以用户显式选择为准 |
 | 模型可见与切换 | 每一轮回复/通知卡片都在底部小字显示当前模型，提醒确认付费模型；会话切换回执同样显示；私聊发 `/model` 打开模型按钮卡片，点一下即为该会话切换模型 |
 | @all 强提醒 | `@all` 内嵌在群卡片正文，不额外发文本消息，只影响展示不影响是否推送 |
 | 扫码创建应用 | 设置页生成二维码，用飞书扫码自动创建应用并回填 App ID / App Secret |
@@ -75,7 +75,7 @@ DeepSeek Harness 的飞书通知与指挥插件。把会话进展推送到飞书
 
 ## 验证状态
 
-- `npm test`：31/31 通过（9 个测试文件）；全部 JS/MJS 脚本 `node --check` 通过。
+- `npm test`：32/32 通过（9 个测试文件）；全部 JS/MJS 脚本 `node --check` 通过。
 - 出站 Webhook：已用真实地址发送卡片（内嵌 `@all`），返回 `StatusCode:0 / code:0`。
 - 应用机器人：扫码连接与测试消息已通过界面验证。
 - 跟随通知切换会话：已用真实通知与 `state.json` 变更验证。
