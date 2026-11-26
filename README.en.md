@@ -18,7 +18,7 @@ The plugin has two separate channels with separate test buttons:
 - Private messages drive DSH sessions and the result returns to the same chat.
 - Busy turns default to `steer` (inline guidance); `/queue` switches to queued delivery.
 - Session commands: `/sessions`, `/resume <no|id|title>`, `/new`, `/current`, `/id`.
-- Follow-notice session switching: when Webhook is off, a reply from the app chat silently follows the most recently notified session, keeping the conversation continuous.
+- Follow-notice session switching: when Webhook is off, the Feishu chat that receives a notice is rebound to the notified session immediately, so replies naturally continue in the right session.
 - Four permission modes: readonly / workspace / Auto Review / full, scoped per Feishu chat.
 - Session location is configurable; the default workspace is `飞书 DSH` under `~/dsh-feishu-mcp`.
 - Card 2.0 rendering: native tables for app messages, markdown tables for webhook, long content paginated.
@@ -28,7 +28,7 @@ The plugin has two separate channels with separate test buttons:
 1. Webhook on: normal turn-end notices go to the group webhook only.
 2. Webhook off: normal turn-end notices go through the app bot, carry the session title and answer, and are delivered to the bound Feishu chat; if none is bound, they fall back to the home chat or owner chat.
 3. Turns started from Feishu always answer in the originating chat and never duplicate to the group webhook.
-4. Follow-notice switching is on by default. When Webhook is off and the chat has no binding yet, the next message silently binds that chat to the most recently notified session. Turn it off to keep the previous session resolution behavior.
+4. Follow-notice switching is on by default. When Webhook is off, sending a notice immediately binds the receiving Feishu chat to the notified session, overwriting any previous binding. Turn it off to keep the previous session resolution behavior.
 
 > DSH does not expose a Host API for changing the session selected in the web UI. This plugin switches the **Feishu chat → DSH session binding**, so continuing in Feishu lands in the notified session; the web UI selection is not changed.
 
