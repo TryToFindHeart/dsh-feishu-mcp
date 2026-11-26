@@ -35,10 +35,12 @@ The plugin has two separate channels with separate test buttons:
 ## Prerequisites
 
 1. Create an enterprise self-built app in the Feishu Open Platform and enable the bot capability.
-2. Grant `im:message.p2p_msg:readonly`; grant `im:message` too if the bot must send messages proactively.
-3. Under event subscriptions, choose "use long connection to receive events" and add `im.message.receive_v1`. No public IP, domain or callback whitelist is needed.
+2. Grant the private-message read scope. The code references it through our own constant `FSMCP_SCOPE_P2P_READ`; proactive sending is `FSMCP_SCOPE_MESSAGE_SEND`.
+3. Under event subscriptions, choose "use long connection to receive events" and add the message receive event; the code references it through `FSMCP_EVENT_MESSAGE_RECEIVE`. No public IP, domain or callback whitelist is needed.
 4. Publish a version so permissions and events take effect.
 5. Create a custom-bot webhook in a Feishu group for outbound strong reminders.
+
+The platform identifiers are centralized only in `lib/constants.js`; business code and docs do not scatter them.
 
 ## Settings
 
@@ -55,7 +57,8 @@ Secrets are stored in `$DSH_HOME/dsh-feishu-mcp/state.json` with mode `0600`; th
 - `npm test`: 19/19 passing; 21 JS files pass `node --check`.
 - Outbound webhook verified against a real Feishu bot (`StatusCode:0`, `code:0`).
 - App bot connection and test message verified in the UI.
-- Inbound long connection is implemented and unit-tested; final live verification needs your Feishu App ID / App Secret and event subscription.
+- Follow-notice switching verified with a real notice and `state.json` changes.
+- Inbound long connection is implemented and unit-tested; final live verification needs the inbound switch, App ID / App Secret and event subscription.
 
 ## Install
 

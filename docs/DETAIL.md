@@ -13,19 +13,20 @@
 - `lib/answers.js`：审批 / 提问卡片与按钮回调。
 - `lib/permissions.js`：四种权限模式。
 - `lib/sessions.js`、`lib/captures.js`、`lib/labels.js`、`lib/restart.js`、`lib/service.js`：会话绑定、消息捕获、标签、重启与服务管理。
+- `lib/constants.js`：统一的 `FSMCP_*` 自有常量；飞书平台要求的官方权限与事件标识只在此处映射，业务代码和文档不散写官方前缀。
 
 `lib/inbound.js`、`lib/notifier.js`、`lib/gateway.js` 是早期通道实现，保留给原有单测；正式装配使用 `*-full.js` 版本。
 
 ## 两条通道
 
 1. **群 Webhook**：监听 `session/event` 的 `turn/end`，只对 `completed` / `error` / `max-tokens` 播报；取消和子代理轮次静默。先发可选 `@all` 文本，再发结果卡片。
-2. **飞书应用机器人**：`WSClient` 长连接订阅 `im.message.receive_v1`，无需公网回调地址。消息经白名单校验、按 `message_id` 去重后进入 DSH 会话；由飞书发起的轮次结束时只回原私聊，不再发群 webhook。
+2. **飞书应用机器人**：`WSClient` 长连接订阅 `FSMCP_EVENT_MESSAGE_RECEIVE` 对应的飞书消息事件，无需公网回调地址。消息经白名单校验、按 `message_id` 去重后进入 DSH 会话；由飞书发起的轮次结束时只回原私聊，不再发群 webhook。
 
 两个测试入口分开：`/test` 只测群 Webhook，`/test-app` 只测应用机器人，避免一次点击收到两条消息。
 
 ## 一次飞书私聊的生命周期
 
-1. 用户私聊机器人 → 飞书通过长连接推送 `im.message.receive_v1`。
+1. 用户私聊机器人 → 飞书通过长连接推送 `FSMCP_EVENT_MESSAGE_RECEIVE` 对应的消息事件。
 2. `inbound-full.js` 过滤机器人消息、校验白名单、按 `message_id` 去重。
 3. 解析 `/help`、`/sessions`、`/resume`、`/new`、`/queue`、`/permission`、`/stop` 等命令；普通文本走 `sessionController.prompt`。
 4. 忙时默认 `steer`（插话引导当前轮），显式 `/queue` 才 `queue`。
