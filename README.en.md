@@ -56,7 +56,7 @@ Secrets are stored in `$DSH_HOME/dsh-feishu-mcp/state.json` with mode `0600`; th
 
 ## Status
 
-- `npm test`: 24/24 passing; 30 JS files pass `node --check`.
+- `npm test`: 25/25 passing; 31 JS files pass `node --check`.
 - Outbound webhook verified against a real Feishu bot (`StatusCode:0`, `code:0`).
 - App bot connection and test message verified in the UI.
 - Follow-notice switching verified with a real notice and `state.json` changes.

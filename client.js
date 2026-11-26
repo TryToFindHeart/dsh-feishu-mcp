@@ -13,7 +13,7 @@
   var API = '/api/feishu-mcp';
   // Bumped on every installed build: the page prints it, so a stale artifact is
   // visible instead of being mistaken for a code bug.
-  var BUILD = '0.3.14';
+  var BUILD = '0.3.15';
 
   // Kept in sync with lib/permissions.js; the Host validates whatever is saved.
   var PERMISSION_ORDER = ['readonly', 'workspace', 'auto', 'full'];
@@ -676,50 +676,6 @@
                   onClick: function () { savePrefs({ defaultPermission: key }); },
                 }, PERMISSION_LABELS[key]);
               })))),
-
-        h(Card, { title: '部署方式' },
-          (function () {
-            var info = service || {};
-            var supported = Boolean(info.supported);
-            var mode = info.mode || 'unknown';
-            var canInstall = Boolean(info.canInstall);
-            var label =
-              mode === 'system-service' ? '已托管：系统级 systemd'
-              : mode === 'user-service' ? '已托管：用户级 systemd'
-              : mode === 'unsupported' ? '当前系统不支持'
-              : '未托管（非服务模式）';
-            return h(React.Fragment, null,
-              h('p', { className: 'fsmcp-sub' },
-                '把 DSH 做成服务后，进程退出或机器重启都会自动拉起；这里只用用户级服务，不需要 sudo。'),
-              h(Field, { label: '当前状态', hint: label },
-                h('div', { className: 'fsmcp-row' },
-                  h('button', {
-                    type: 'button',
-                    className: 'fsmcp-btn fsmcp-btn-primary',
-                    disabled: Boolean(busy) || !supported || !canInstall,
-                    onClick: installService,
-                  }, busy === 'service'
-                    ? '正在安装…'
-                    : !supported ? '不可用'
-                    : canInstall ? '做成服务（无需 sudo）' : '已是服务模式'),
-                  h('button', {
-                    type: 'button',
-                    className: 'fsmcp-btn',
-                    disabled: Boolean(busy),
-                    onClick: restartNow,
-                  }, busy === 'restart' ? '正在重启…' : '立即重启 DSH'))),
-              info.warnings && info.warnings.length
-                ? h('div', { className: 'fsmcp-warn' }, info.warnings.map(function (line, index) {
-                    return h('p', { key: index }, line);
-                  }))
-                : null,
-              info.hint ? h('p', { className: 'fsmcp-hint' }, info.hint) : null,
-              info.installed && info.unit
-                ? h('details', null,
-                  h('summary', { className: 'fsmcp-hint' }, '查看生成的 ' + info.unitPath),
-                  h('pre', { className: 'fsmcp-pre' }, info.unit))
-                : null);
-          })()),
 
         h(Card, { title: '指挥与安全' },
           h(Row, { label: '允许在飞书里指挥 DSH', hint: '关闭后，飞书只用来接收通知，收到的消息不会变成对话。' },

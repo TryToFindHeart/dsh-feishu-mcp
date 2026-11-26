@@ -403,6 +403,10 @@ export function apply(ctx) {
         next.answerTimeoutMinutes = Math.round(minutes)
       }
       if (body.awayMode !== undefined) next.awayMode = body.awayMode === true
+      if (body.defaultPermission !== undefined) {
+        if (!Object.hasOwn(PERMISSION_MODES, body.defaultPermission)) throw new Error('默认权限无效')
+        next.defaultPermission = body.defaultPermission
+      }
       if (body.homeChatId !== undefined) next.homeChatId = asString(body.homeChatId)
 
       const saved = await writeState(next)
