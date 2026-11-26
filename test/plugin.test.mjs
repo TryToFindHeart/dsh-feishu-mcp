@@ -1,6 +1,10 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
+import { mkdtempSync, writeFileSync } from 'node:fs'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
 
+import { apply } from '../index.js'
 import { buildContentCards } from '../lib/card.js'
 import { createNotifier, turnNotice } from '../lib/notifier.js'
 import { sendWebhook } from '../lib/webhook.js'
@@ -138,5 +142,57 @@ test('由飞书私聊发起的轮次只回原对话，不重复发 webhook', asy
     assert.ok(calls.includes('chat-card-sent'))
   } finally {
     fake.restore()
+  }
+})
+
+test('/test 使用已保存的 webhook 地址发送测试卡片', async () => {
+  const originalHome = process.env.DSH_HOME
+  const home = mkdtempSync(join(tmpdir(), 'dsh-feishu-mcp-test-'))
+  const { mkdirSync } = await import('node:fs')
+  mkdirSync(join(home, 'dsh-feishu-mcp'), { recursive: true })
+  writeFileSync(
+    join(home, 'dsh-feishu-mcp', 'state.json'),
+    JSON.stringify({ version: 3, ...baseState, webhookAtAll: false }),
+  )
+  process.env.DSH_HOME = home
+
+  const routes = []
+  const ctx = {
+    logger: { warn() {} },
+    effect() {},
+    on() {},
+    get() { return undefined },
+    inject(names, callback) {
+      if (names.includes('connection')) {
+        callback({
+          connection: {
+            fetch: {
+              register(route) { routes.push(route) },
+            },
+          },
+          effect(fn) { fn() },
+        })
+      } else {
+        callback({ tools: { register() {} } })
+      }
+    },
+  }
+
+  apply(ctx)
+  const route = routes.find((item) => item.path === '/api/feishu-mcp/test')
+  assert.ok(route, '应注册 /api/feishu-mcp/test 路由')
+
+  const fake = installFetch(async () => new Response(JSON.stringify({ code: 0 }), { status: 200 }))
+  try {
+    const response = await route.fetch(new Request('http://localhost/api/feishu-mcp/test', { method: 'POST' }))
+    const payload = await response.json()
+    assert.equal(response.status, 200)
+    assert.equal(payload.ok, true)
+    assert.equal(fake.calls.length, 1)
+    assert.equal(fake.calls[0].url, baseState.webhookUrl)
+  } finally {
+    fake.restore()
+    if (originalHome === undefined) delete process.env.DSH_HOME
+    else process.env.DSH_HOME = originalHome
   }
 })

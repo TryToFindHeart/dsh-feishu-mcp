@@ -429,7 +429,7 @@ export function apply(ctx) {
         mentionAll: false,
       })
       const results = []
-      for (const card of cards) results.push(await sendWebhookCard(state.webhookUrl, card))
+      for (const card of cards) results.push(await sendWebhookCard(state, card))
       return json({ ok: true, sent: results.length, response: results[0] })
     },
 
