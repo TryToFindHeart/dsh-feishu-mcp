@@ -61,6 +61,7 @@ Secrets are stored in `$DSH_HOME/dsh-feishu-mcp/state.json` with mode `0600`; th
 - Outbound webhook verified against a real Feishu bot (`StatusCode:0`, `code:0`).
 - App bot connection and test message verified in the UI.
 - Follow-notice switching verified with a real notice and `state.json` changes.
+- Model footer and switching: unit-tested that every card shows the current model; `/model` button card and session-switch receipts carry it too.
 - Inbound long connection is implemented and unit-tested; final live verification needs the inbound switch, App ID / App Secret and event subscription.
 
 ## Install
