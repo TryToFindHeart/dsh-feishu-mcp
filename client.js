@@ -276,7 +276,7 @@
               if (!alive.current) return;
               if (result.status === 'ready') {
                 setStatus('ready');
-                props.onConnected(result.state);
+                props.onConnected(result.state, result.defaultChannelApplied);
               } else if (result.status === 'expired') {
                 setStatus('expired');
                 setMessage('二维码已过期，请重新生成。');
@@ -367,7 +367,7 @@
         setBusy(true);
         setMessage('');
         api('/credentials', { method: 'POST', body: { appId: appId, appSecret: secret, domain: domain } })
-          .then(function (result) { props.onConnected(result.state); })
+          .then(function (result) { props.onConnected(result.state, result.defaultChannelApplied); })
           .catch(function (error) { setMessage(errorMessage(error)); })
           .then(function () { setBusy(false); });
       }
@@ -810,6 +810,9 @@
       var onboardRes = useState(false);
       var showOnboard = onboardRes[0];
       var setShowOnboard = onboardRes[1];
+      var pageNoticeRes = useState('');
+      var pageNotice = pageNoticeRes[0];
+      var setPageNotice = pageNoticeRes[1];
 
       var load = useCallback(function () {
         setLoading(true);
@@ -836,10 +839,13 @@
           (error || '读取连接状态失败。') + ' ',
           h(Button, { onClick: load }, '重试'));
       } else {
-        var onConnected = function (next) {
+        var onConnected = function (next, defaultChannelApplied) {
           setState(normalizeState(next));
           setError('');
           setShowOnboard(false);
+          if (defaultChannelApplied) {
+            setPageNotice('已按应用机器人默认配置：关闭 Webhook 推送、开启飞书私聊长连接入站。如需改回，在下方开关里调整即可。');
+          }
         };
         var hasApp = state.appConfigured === true || Boolean(state.appId && state.appSecretConfigured);
         var needOnboard = !hasApp || showOnboard;
@@ -853,6 +859,7 @@
             setState: setState,
             onOnboard: function () { setShowOnboard(true); },
           }),
+          pageNotice ? h('div', { className: 'fsmcp-ok' }, pageNotice) : null,
           error ? h('div', { className: 'fsmcp-error' }, error) : null);
       }
 

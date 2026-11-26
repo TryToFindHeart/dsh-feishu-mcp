@@ -8,6 +8,7 @@ import { apply } from '../index.js'
 import { buildContentCards } from '../lib/card.js'
 import { createNotifier, turnNotice } from '../lib/notifier.js'
 import { createNotifier as createFullNotifier } from '../lib/notify-full.js'
+import { createModels, modelLabel } from '../lib/models.js'
 import { sendWebhook } from '../lib/webhook.js'
 
 const baseState = {
@@ -399,4 +400,24 @@ test('turn/end 即使用 cancelled 也会撤销 Typing 反应', async () => {
   } finally {
     fake.restore()
   }
+})
+
+test('createModels 从会话 agent 读取当前模型，modelLabel 显示可读名称', () => {
+  const ctx = {
+    get(name) {
+      if (name === 'agents') {
+        return { get: () => ({ model: { current: () => ({ provider: 'deepseek', model: 'deepseek-chat' }) } }) }
+      }
+      return undefined
+    },
+  }
+  const models = createModels({ ctx })
+  assert.deepEqual(models.current('session-1'), { provider: 'deepseek', model: 'deepseek-chat' })
+  assert.equal(
+    modelLabel({ provider: 'deepseek', model: 'deepseek-chat', reasoningEffort: 'high' }, {
+      groups: [{ id: 'deepseek', models: [{ id: 'deepseek-chat', name: 'DeepSeek V3' }] }],
+    }),
+    'deepseek/deepseek-chat（DeepSeek V3） · high',
+  )
+  assert.equal(modelLabel(undefined), '默认模型（未显式选择）')
 })

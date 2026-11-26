@@ -38,6 +38,7 @@ import { createGateway } from './lib/gateway-full.js'
 import { createCaptureStore } from './lib/captures.js'
 import { createInbound } from './lib/inbound-full.js'
 import { createSessions } from './lib/sessions.js'
+import { createModels, modelLabel } from './lib/models.js'
 import { createLabels } from './lib/labels.js'
 import { createPermissions, PERMISSION_MODES } from './lib/permissions.js'
 import { createRestart } from './lib/restart.js'
@@ -215,6 +216,22 @@ export function apply(ctx) {
     return { bot, token }
   }
 
+  /**
+   * First-time app credentials flip the channel defaults: the app bot is now
+   * the primary path, so webhook reminders step aside and private-chat intake
+   * turns on. An explicit choice by the operator always wins.
+   */
+  function applyAppChannelDefaults(previous) {
+    const firstApp = !previous.appId && !previous.appSecret
+    if (!firstApp || previous.channelChoiceExplicit || previous.channelDefaultsApplied) {
+      return { next: previous, applied: false }
+    }
+    return {
+      next: { ...previous, enableWebhook: false, enableInbound: true, channelDefaultsApplied: true },
+      applied: true,
+    }
+  }
+
   const handlers = {
     /** Full connection state for the page (secret-free). */
     async state() {
@@ -284,8 +301,9 @@ export function apply(ctx) {
       }
 
       const previous = await readState()
+      const channel = applyAppChannelDefaults(previous)
       const saved = await writeState({
-        ...previous,
+        ...channel.next,
         appId: result.appId,
         appSecret: result.appSecret,
         domain: result.domain,
@@ -301,7 +319,7 @@ export function apply(ctx) {
         onboardedAt: Date.now(),
       })
       syncGateway()
-      return json({ status: 'ready', state: publicState(saved) })
+      return json({ status: 'ready', state: publicState(saved), defaultChannelApplied: channel.applied })
     },
 
     /** Stop waiting on a registration (the page closed the dialog). */
@@ -325,9 +343,10 @@ export function apply(ctx) {
       const { bot } = await botIdentity(appId, appSecret, domain)
       const previous = await readState()
       if (previous.appId && previous.appId !== appId) forgetTenantToken(previous.appId, previous.domain)
+      const channel = applyAppChannelDefaults(previous)
 
       const saved = await writeState({
-        ...previous,
+        ...channel.next,
         appId,
         appSecret,
         domain,
@@ -335,7 +354,7 @@ export function apply(ctx) {
         botOpenId: bot.openId || previous.botOpenId,
       })
       syncGateway()
-      return json({ state: publicState(saved) })
+      return json({ state: publicState(saved), defaultChannelApplied: channel.applied })
     },
 
     /** Persist the toggles and the allowlist. */
@@ -358,7 +377,10 @@ export function apply(ctx) {
         // 浏览器拿不到完整密钥，留空表示保留原值。
         if (value) next.webhookUrl = value
       }
-      if (body.enableWebhook !== undefined) next.enableWebhook = body.enableWebhook !== false
+      if (body.enableWebhook !== undefined) {
+        next.enableWebhook = body.enableWebhook !== false
+        next.channelChoiceExplicit = true
+      }
       if (body.webhookAtAll !== undefined) next.webhookAtAll = body.webhookAtAll !== false
       if (body.notifyTurnEnd !== undefined) {
         next.notifyTurnEnd = body.notifyTurnEnd !== false
@@ -370,7 +392,10 @@ export function apply(ctx) {
         if (!Number.isFinite(maxChars) || maxChars < 200 || maxChars > 8000) throw new Error('摘要长度需要是 200–8000 之间的数字')
         next.maxChars = Math.round(maxChars)
       }
-      if (body.enableInbound !== undefined) next.enableInbound = body.enableInbound === true
+      if (body.enableInbound !== undefined) {
+        next.enableInbound = body.enableInbound === true
+        next.channelChoiceExplicit = true
+      }
       if (body.inboundReply !== undefined) next.inboundReply = body.inboundReply !== false
       if (body.followNoticeSwitch !== undefined) next.followNoticeSwitch = body.followNoticeSwitch !== false
       if (body.sessionMode !== undefined) {
@@ -539,11 +564,13 @@ export function apply(ctx) {
   const describe = createLabels(ctx)
   const captures = createCaptureStore()
   const sessions = createSessions({ ctx, readState, writeState, trace })
+  const models = createModels({ ctx })
   const permissions = createPermissions({ ctx, readState, writeState, trace })
   /** chatId → the permission picker card's message id */
   const permissionCards = new Map()
   const answers = createAnswerers({
     permissions,
+    models,
     permissionCards,
     captures,
     ctx,
@@ -567,6 +594,7 @@ export function apply(ctx) {
     trace,
     captures,
     sessions,
+    models,
     restart,
     permissions,
     permissionCards,
