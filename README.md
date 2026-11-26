@@ -1,6 +1,6 @@
 # dsh-feishu-mcp
 
-飞书全能力插件：`webhook` 结束强提醒 + 飞书自建应用私聊指挥。基于 `dsh-plugin-feishu-im` 的实现合并而来，并保留原有群 webhook 链路。
+飞书全能力插件：`webhook` 结束强提醒 + 飞书自建应用私聊指挥。保留原有群 webhook 链路，并补齐扫码建应用、私聊指挥、审批/提问卡片等完整能力。
 
 ## 能力对照
 
@@ -15,7 +15,7 @@
 | 插话 / 排队 | 已合入 | 忙时默认插话引导本轮；`/queue` 改为排队 |
 | 会话切换 | 已合入 | `/sessions`、`/resume <编号｜id｜标题>` |
 | 权限模式 | 已合入 | 只读 / 工作区读写 / Auto Review / 完全权限 |
-| 会话位置 | 已合入 | 默认新建在 `~/dsh-plugin-feishu-im`，工作区名「飞书IM」，设置里可改 |
+| 会话位置 | 已合入 | 默认新建在 `~/dsh-feishu-mcp`，工作区名「飞书 DSH」，设置里可改 |
 | 渲染 | 已合入 | Card JSON 2.0；应用消息用原生 table，webhook 用 markdown table；超长按段分页 |
 
 ## 两条链路

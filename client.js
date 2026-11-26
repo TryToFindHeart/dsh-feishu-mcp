@@ -1,6 +1,6 @@
-// dsh-plugin-feishu-im — client half.
+// dsh-feishu-mcp — client half.
 //
-// Registers one page in the shell's `settings.section` list: the 「飞书 IM」 tab.
+// Registers one page in the shell's `settings.section` list: the 「飞书通知」 tab.
 // The page talks to its own Host half through the authenticated exact Fetch
 // routes the Host registers below `/api`; the browser cookie is the credential,
 // so this file never sees the App Secret.
@@ -13,7 +13,7 @@
   var API = '/api/feishu-mcp';
   // Bumped on every installed build: the page prints it, so a stale artifact is
   // visible instead of being mistaken for a code bug.
-  var BUILD = '0.3.0';
+  var BUILD = '0.3.1';
 
   // Kept in sync with lib/permissions.js; the Host validates whatever is saved.
   var PERMISSION_ORDER = ['readonly', 'workspace', 'auto', 'full'];
@@ -31,55 +31,55 @@
   };
 
   var CSS = [
-    '.fsim-page{display:flex;flex-direction:column;gap:20px;max-width:760px;color:var(--dsw-alias-label-primary,#1a1a1a);}',
-    '.fsim-head{display:flex;flex-direction:column;gap:6px;}',
-    '.fsim-title{font-size:20px;font-weight:600;line-height:1.3;margin:0;}',
-    '.fsim-sub{font-size:13px;line-height:1.6;color:var(--dsw-alias-label-secondary);margin:0;}',
-    '.fsim-card{border:1px solid var(--dsw-alias-border-l1);border-radius:12px;background:var(--dsw-alias-bg-layer-1);overflow:hidden;}',
-    '.fsim-card-head{padding:14px 16px 12px;border-bottom:1px solid var(--dsw-alias-border-l1);display:flex;align-items:center;gap:10px;}',
-    '.fsim-card-title{font-size:14px;font-weight:600;margin:0;}',
-    '.fsim-card-body{padding:16px;display:flex;flex-direction:column;gap:14px;}',
-    '.fsim-row{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;}',
-    '.fsim-row-text{display:flex;flex-direction:column;gap:3px;min-width:0;}',
-    '.fsim-label{font-size:13px;font-weight:500;}',
-    '.fsim-hint{font-size:12px;line-height:1.55;color:var(--dsw-alias-label-secondary);}',
-    '.fsim-mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:var(--dsw-alias-label-secondary);word-break:break-all;}',
-    '.fsim-value{font-size:13px;}',
-    '.fsim-dot{width:8px;height:8px;border-radius:50%;flex:none;margin-top:6px;}',
-    '.fsim-dot-on{background:var(--dsw-alias-state-success-primary);}',
-    '.fsim-dot-off{background:var(--dsw-alias-state-idle-primary);}',
-    '.fsim-btn{appearance:none;-webkit-appearance:none;height:32px;padding:0 14px;border-radius:8px;font:inherit;font-size:13px;font-weight:500;cursor:pointer;border:1px solid transparent;white-space:nowrap;transition:opacity .12s ease;display:inline-flex;align-items:center;justify-content:center;}',
-    '.fsim-btn:disabled{opacity:.5;cursor:default;}',
-    '.fsim-btn-primary{background:var(--dsw-alias-brand-primary,#2f7cf6);color:var(--dsw-alias-bg-base,#fff);-webkit-text-fill-color:var(--dsw-alias-bg-base,#fff);}',
-    '.fsim-btn-ghost{background:var(--dsw-alias-bg-layer-2,#f2f3f5);border-color:var(--dsw-alias-border-l2,#d0d3d9);color:var(--dsw-alias-label-primary,#1a1a1a);-webkit-text-fill-color:currentColor;}',
-    '.fsim-btn-danger{background:transparent;border-color:var(--dsw-alias-border-l2,#d0d3d9);color:var(--dsw-alias-state-error-primary,#d92d20);-webkit-text-fill-color:currentColor;}',
-    '.fsim-actions{display:flex;gap:8px;flex-wrap:wrap;}',
-    '.fsim-input{height:34px;width:100%;box-sizing:border-box;border:1px solid var(--dsw-alias-border-l1);border-radius:8px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font-size:13px;padding:0 10px;outline:none;}',
-    '.fsim-input:focus{border-color:var(--dsw-alias-brand-primary);}',
-    '.fsim-textarea{width:100%;box-sizing:border-box;min-height:64px;border:1px solid var(--dsw-alias-border-l1);border-radius:8px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font-size:13px;padding:8px 10px;outline:none;resize:vertical;font-family:inherit;}',
-    '.fsim-field{display:flex;flex-direction:column;gap:6px;}',
-    '.fsim-field-label{font-size:12px;font-weight:500;color:var(--dsw-alias-label-secondary);}',
-    '.fsim-switch{position:relative;width:40px;height:22px;border-radius:999px;border:1px solid var(--dsw-alias-border-l2,#3a3a3a);background:var(--dsw-alias-bg-layer-2,#2a2a2a);cursor:pointer;flex:none;transition:background .15s ease;}',
-    '.fsim-switch[aria-checked="true"]{background:var(--dsw-alias-brand-primary,#2f7cf6);border-color:var(--dsw-alias-brand-primary,#2f7cf6);}',
-    '.fsim-switch::after{content:"";position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:var(--dsw-alias-bg-base,#fff);transition:transform .15s ease;}',
-    '.fsim-switch[aria-checked="true"]::after{transform:translateX(18px);}',
-    '.fsim-error{border:1px solid var(--dsw-alias-state-error-primary);border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.55;color:var(--dsw-alias-state-error-primary);background:color-mix(in srgb,var(--dsw-alias-state-error-primary) 8%,transparent);}',
-    '.fsim-ok{border:1px solid var(--dsw-alias-border-l1);border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.55;color:var(--dsw-alias-state-success-primary);background:color-mix(in srgb,var(--dsw-alias-state-success-primary) 8%,transparent);}',
-    '.fsim-qr-wrap{display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;}',
-    '.fsim-qr{width:200px;height:200px;border-radius:12px;background:#fff;padding:8px;box-sizing:border-box;border:1px solid var(--dsw-alias-border-l1);}',
-    '.fsim-qr-side{display:flex;flex-direction:column;gap:8px;min-width:220px;flex:1;}',
-    '.fsim-wait{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--dsw-alias-label-secondary);}',
-    '.fsim-pulse{width:7px;height:7px;border-radius:50%;background:var(--dsw-alias-brand-primary);animation:fsim-pulse 1.2s ease-in-out infinite;}',
-    '@keyframes fsim-pulse{0%,100%{opacity:.25}50%{opacity:1}}',
-    '.fsim-divider{display:flex;align-items:center;gap:12px;color:var(--dsw-alias-label-secondary);font-size:12px;}',
-    '.fsim-divider::before,.fsim-divider::after{content:"";flex:1;height:1px;background:var(--dsw-alias-border-l1);}',
-    '.fsim-list{display:flex;flex-direction:column;}',
-    '.fsim-list-item{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 16px;border-bottom:1px solid var(--dsw-alias-border-l1);}',
-    '.fsim-list-item:last-child{border-bottom:none;}',
-    '.fsim-code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;background:var(--dsw-alias-bg-layer-2);border-radius:4px;padding:1px 5px;color:var(--dsw-alias-label-secondary);}',
-    '.fsim-inline{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}',
-    '.fsim-inline .fsim-input{width:96px;flex:none;}',
-    '.fsim-warn{border:1px solid var(--dsw-alias-state-warn-primary,#b54708);border-radius:10px;padding:9px 12px;font-size:12px;line-height:1.55;color:var(--dsw-alias-state-warn-primary,#b54708);background:color-mix(in srgb,var(--dsw-alias-state-warn-primary,#b54708) 8%,transparent);}',
+    '.fsmcp-page{display:flex;flex-direction:column;gap:20px;max-width:760px;color:var(--dsw-alias-label-primary,#1a1a1a);}',
+    '.fsmcp-head{display:flex;flex-direction:column;gap:6px;}',
+    '.fsmcp-title{font-size:20px;font-weight:600;line-height:1.3;margin:0;}',
+    '.fsmcp-sub{font-size:13px;line-height:1.6;color:var(--dsw-alias-label-secondary);margin:0;}',
+    '.fsmcp-card{border:1px solid var(--dsw-alias-border-l1);border-radius:12px;background:var(--dsw-alias-bg-layer-1);overflow:hidden;}',
+    '.fsmcp-card-head{padding:14px 16px 12px;border-bottom:1px solid var(--dsw-alias-border-l1);display:flex;align-items:center;gap:10px;}',
+    '.fsmcp-card-title{font-size:14px;font-weight:600;margin:0;}',
+    '.fsmcp-card-body{padding:16px;display:flex;flex-direction:column;gap:14px;}',
+    '.fsmcp-row{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;}',
+    '.fsmcp-row-text{display:flex;flex-direction:column;gap:3px;min-width:0;}',
+    '.fsmcp-label{font-size:13px;font-weight:500;}',
+    '.fsmcp-hint{font-size:12px;line-height:1.55;color:var(--dsw-alias-label-secondary);}',
+    '.fsmcp-mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12px;color:var(--dsw-alias-label-secondary);word-break:break-all;}',
+    '.fsmcp-value{font-size:13px;}',
+    '.fsmcp-dot{width:8px;height:8px;border-radius:50%;flex:none;margin-top:6px;}',
+    '.fsmcp-dot-on{background:var(--dsw-alias-state-success-primary);}',
+    '.fsmcp-dot-off{background:var(--dsw-alias-state-idle-primary);}',
+    '.fsmcp-btn{appearance:none;-webkit-appearance:none;height:32px;padding:0 14px;border-radius:8px;font:inherit;font-size:13px;font-weight:500;cursor:pointer;border:1px solid transparent;white-space:nowrap;transition:opacity .12s ease;display:inline-flex;align-items:center;justify-content:center;}',
+    '.fsmcp-btn:disabled{opacity:.5;cursor:default;}',
+    '.fsmcp-btn-primary{background:var(--dsw-alias-brand-primary,#2f7cf6);color:var(--dsw-alias-bg-base,#fff);-webkit-text-fill-color:var(--dsw-alias-bg-base,#fff);}',
+    '.fsmcp-btn-ghost{background:var(--dsw-alias-bg-layer-2,#f2f3f5);border-color:var(--dsw-alias-border-l2,#d0d3d9);color:var(--dsw-alias-label-primary,#1a1a1a);-webkit-text-fill-color:currentColor;}',
+    '.fsmcp-btn-danger{background:transparent;border-color:var(--dsw-alias-border-l2,#d0d3d9);color:var(--dsw-alias-state-error-primary,#d92d20);-webkit-text-fill-color:currentColor;}',
+    '.fsmcp-actions{display:flex;gap:8px;flex-wrap:wrap;}',
+    '.fsmcp-input{height:34px;width:100%;box-sizing:border-box;border:1px solid var(--dsw-alias-border-l1);border-radius:8px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font-size:13px;padding:0 10px;outline:none;}',
+    '.fsmcp-input:focus{border-color:var(--dsw-alias-brand-primary);}',
+    '.fsmcp-textarea{width:100%;box-sizing:border-box;min-height:64px;border:1px solid var(--dsw-alias-border-l1);border-radius:8px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font-size:13px;padding:8px 10px;outline:none;resize:vertical;font-family:inherit;}',
+    '.fsmcp-field{display:flex;flex-direction:column;gap:6px;}',
+    '.fsmcp-field-label{font-size:12px;font-weight:500;color:var(--dsw-alias-label-secondary);}',
+    '.fsmcp-switch{position:relative;width:40px;height:22px;border-radius:999px;border:1px solid var(--dsw-alias-border-l2,#3a3a3a);background:var(--dsw-alias-bg-layer-2,#2a2a2a);cursor:pointer;flex:none;transition:background .15s ease;}',
+    '.fsmcp-switch[aria-checked="true"]{background:var(--dsw-alias-brand-primary,#2f7cf6);border-color:var(--dsw-alias-brand-primary,#2f7cf6);}',
+    '.fsmcp-switch::after{content:"";position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:var(--dsw-alias-bg-base,#fff);transition:transform .15s ease;}',
+    '.fsmcp-switch[aria-checked="true"]::after{transform:translateX(18px);}',
+    '.fsmcp-error{border:1px solid var(--dsw-alias-state-error-primary);border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.55;color:var(--dsw-alias-state-error-primary);background:color-mix(in srgb,var(--dsw-alias-state-error-primary) 8%,transparent);}',
+    '.fsmcp-ok{border:1px solid var(--dsw-alias-border-l1);border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.55;color:var(--dsw-alias-state-success-primary);background:color-mix(in srgb,var(--dsw-alias-state-success-primary) 8%,transparent);}',
+    '.fsmcp-qr-wrap{display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;}',
+    '.fsmcp-qr{width:200px;height:200px;border-radius:12px;background:#fff;padding:8px;box-sizing:border-box;border:1px solid var(--dsw-alias-border-l1);}',
+    '.fsmcp-qr-side{display:flex;flex-direction:column;gap:8px;min-width:220px;flex:1;}',
+    '.fsmcp-wait{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--dsw-alias-label-secondary);}',
+    '.fsmcp-pulse{width:7px;height:7px;border-radius:50%;background:var(--dsw-alias-brand-primary);animation:fsmcp-pulse 1.2s ease-in-out infinite;}',
+    '@keyframes fsmcp-pulse{0%,100%{opacity:.25}50%{opacity:1}}',
+    '.fsmcp-divider{display:flex;align-items:center;gap:12px;color:var(--dsw-alias-label-secondary);font-size:12px;}',
+    '.fsmcp-divider::before,.fsmcp-divider::after{content:"";flex:1;height:1px;background:var(--dsw-alias-border-l1);}',
+    '.fsmcp-list{display:flex;flex-direction:column;}',
+    '.fsmcp-list-item{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:12px 16px;border-bottom:1px solid var(--dsw-alias-border-l1);}',
+    '.fsmcp-list-item:last-child{border-bottom:none;}',
+    '.fsmcp-code{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:11.5px;background:var(--dsw-alias-bg-layer-2);border-radius:4px;padding:1px 5px;color:var(--dsw-alias-label-secondary);}',
+    '.fsmcp-inline{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}',
+    '.fsmcp-inline .fsmcp-input{width:96px;flex:none;}',
+    '.fsmcp-warn{border:1px solid var(--dsw-alias-state-warn-primary,#b54708);border-radius:10px;padding:9px 12px;font-size:12px;line-height:1.55;color:var(--dsw-alias-state-warn-primary,#b54708);background:color-mix(in srgb,var(--dsw-alias-state-warn-primary,#b54708) 8%,transparent);}',
   ].join('');
 
   async function api(path, options) {
@@ -106,6 +106,23 @@
   function errorMessage(error) {
     if (error instanceof Error) return error.message;
     return String(error);
+  }
+
+  /** 兼容旧版 Host 返回的状态：老版本可能没有 notify 对象。 */
+  function normalizeState(value) {
+    var next = value && typeof value === 'object' ? value : {};
+    var notify = next.notify && typeof next.notify === 'object' ? next.notify : {};
+    return Object.assign({}, next, {
+      notify: {
+        turnEnd: notify.turnEnd !== undefined ? notify.turnEnd : next.notifyTurnEnd !== false,
+        approval: notify.approval !== false,
+        question: notify.question !== false,
+      },
+      allowedOpenIds: Array.isArray(next.allowedOpenIds) ? next.allowedOpenIds : [],
+      chatSessions: next.chatSessions && typeof next.chatSessions === 'object' ? next.chatSessions : {},
+      chatPermissions: next.chatPermissions && typeof next.chatPermissions === 'object' ? next.chatPermissions : {},
+      stateFile: next.stateFile || '~/.dsh/dsh-feishu-mcp/state.json',
+    });
   }
 
   function formatRemaining(expiresAt) {
@@ -142,9 +159,9 @@
       render() {
         if (this.state.error) {
           var error = this.state.error;
-          return h('div', { className: 'fsim-page' },
-            h('div', { className: 'fsim-error' },
-              '飞书 IM 页面渲染失败：', String((error && error.message) || error),
+          return h('div', { className: 'fsmcp-page' },
+            h('div', { className: 'fsmcp-error' },
+              '飞书通知页面渲染失败：', String((error && error.message) || error),
               h('pre', { style: { whiteSpace: 'pre-wrap', fontSize: '11px', margin: '8px 0 0' } },
                 String((error && error.stack) || '').slice(0, 1500))));
         }
@@ -156,7 +173,7 @@
       var variant = props.variant || 'ghost';
       return h('button', {
         type: 'button',
-        className: 'fsim-btn fsim-btn-' + variant,
+        className: 'fsmcp-btn fsmcp-btn-' + variant,
         disabled: props.disabled,
         onClick: props.onClick,
       }, props.children);
@@ -168,33 +185,33 @@
         role: 'switch',
         'aria-checked': props.checked ? 'true' : 'false',
         'aria-label': props.label,
-        className: 'fsim-switch',
+        className: 'fsmcp-switch',
         onClick: function () { if (!props.disabled) props.onChange(!props.checked); },
       });
     }
 
     function Row(props) {
-      return h('div', { className: 'fsim-row' },
-        h('div', { className: 'fsim-row-text' },
-          h('div', { className: 'fsim-label' }, props.label),
-          props.hint ? h('div', { className: 'fsim-hint' }, props.hint) : null),
+      return h('div', { className: 'fsmcp-row' },
+        h('div', { className: 'fsmcp-row-text' },
+          h('div', { className: 'fsmcp-label' }, props.label),
+          props.hint ? h('div', { className: 'fsmcp-hint' }, props.hint) : null),
         props.children);
     }
 
     function Card(props) {
-      return h('section', { className: 'fsim-card' },
-        props.title ? h('header', { className: 'fsim-card-head' },
-          props.dot ? h('span', { className: 'fsim-dot ' + (props.dot === 'on' ? 'fsim-dot-on' : 'fsim-dot-off') }) : null,
-          h('h3', { className: 'fsim-card-title' }, props.title),
+      return h('section', { className: 'fsmcp-card' },
+        props.title ? h('header', { className: 'fsmcp-card-head' },
+          props.dot ? h('span', { className: 'fsmcp-dot ' + (props.dot === 'on' ? 'fsmcp-dot-on' : 'fsmcp-dot-off') }) : null,
+          h('h3', { className: 'fsmcp-card-title' }, props.title),
           props.extra || null) : null,
-        h('div', { className: 'fsim-card-body' }, props.children));
+        h('div', { className: 'fsmcp-card-body' }, props.children));
     }
 
     function Field(props) {
-      return h('label', { className: 'fsim-field' },
-        h('span', { className: 'fsim-field-label' }, props.label),
+      return h('label', { className: 'fsmcp-field' },
+        h('span', { className: 'fsmcp-field-label' }, props.label),
         props.children,
-        props.hint ? h('span', { className: 'fsim-hint' }, props.hint) : null);
+        props.hint ? h('span', { className: 'fsmcp-hint' }, props.hint) : null);
     }
 
     /** 扫码创建：设备码流程 + 轮询。 */
@@ -280,35 +297,35 @@
 
       if (status === 'idle' || status === 'loading') {
         return h(Card, { title: '扫码创建飞书应用' },
-          h('p', { className: 'fsim-sub' },
+          h('p', { className: 'fsmcp-sub' },
             '用飞书扫一下，自动创建一个只属于 DSH 的机器人应用，并带上收发消息所需的权限。'),
-          h('div', { className: 'fsim-actions' },
+          h('div', { className: 'fsmcp-actions' },
             h(Button, { variant: 'primary', disabled: status === 'loading', onClick: begin },
               status === 'loading' ? '正在生成二维码…' : '生成连接二维码')),
-          message ? h('div', { className: 'fsim-error' }, message) : null);
+          message ? h('div', { className: 'fsmcp-error' }, message) : null);
       }
 
       if (!qr) return null;
 
       return h(Card, { title: '扫码创建飞书应用' },
-        h('div', { className: 'fsim-qr-wrap' },
+        h('div', { className: 'fsmcp-qr-wrap' },
           qr.qrDataUrl
-            ? h('img', { className: 'fsim-qr', src: qr.qrDataUrl, alt: '飞书扫码创建应用' })
-            : h('div', { className: 'fsim-qr fsim-hint', style: { display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '16px' } },
+            ? h('img', { className: 'fsmcp-qr', src: qr.qrDataUrl, alt: '飞书扫码创建应用' })
+            : h('div', { className: 'fsmcp-qr fsmcp-hint', style: { display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: '16px' } },
                 '二维码组件未安装，请直接点开下面的链接。'),
-          h('div', { className: 'fsim-qr-side' },
-            h('div', { className: 'fsim-wait' },
-              h('span', { className: 'fsim-pulse' }),
+          h('div', { className: 'fsmcp-qr-side' },
+            h('div', { className: 'fsmcp-wait' },
+              h('span', { className: 'fsmcp-pulse' }),
               h('span', null, '等待在飞书中确认…（' + formatRemaining(qr.expiresAt) + ' 后过期）')),
-            h('div', { className: 'fsim-hint' },
+            h('div', { className: 'fsmcp-hint' },
               '手机上打开飞书扫左边二维码，按提示确认创建即可。这个页面会自动完成后续配置。'),
-            qr.userCode ? h('div', { className: 'fsim-hint' }, '配对码：', h('span', { className: 'fsim-code' }, qr.userCode)) : null,
-            qr.qrUrl ? h('a', { className: 'fsim-hint', href: qr.qrUrl, target: '_blank', rel: 'noreferrer' }, '点不开二维码时，用飞书打开这个链接') : null,
-            h('div', { className: 'fsim-actions' },
+            qr.userCode ? h('div', { className: 'fsmcp-hint' }, '配对码：', h('span', { className: 'fsmcp-code' }, qr.userCode)) : null,
+            qr.qrUrl ? h('a', { className: 'fsmcp-hint', href: qr.qrUrl, target: '_blank', rel: 'noreferrer' }, '点不开二维码时，用飞书打开这个链接') : null,
+            h('div', { className: 'fsmcp-actions' },
               h(Button, { onClick: cancel }, '取消'),
               h(Button, { onClick: begin }, '重新生成'))),
         ),
-        message ? h('div', { className: 'fsim-error' }, message) : null);
+        message ? h('div', { className: 'fsmcp-error' }, message) : null);
     }
 
     /** 手动填写凭据。 */
@@ -340,29 +357,29 @@
       }
 
       return h(Card, { title: '已有飞书应用？手动连接' },
-        h('p', { className: 'fsim-sub' },
+        h('p', { className: 'fsmcp-sub' },
           '在飞书开放平台创建应用并开启机器人能力，把 App ID / App Secret 填在这里。权限与事件订阅需要自行配置，扫码创建会替你完成这些。'),
         h(Field, { label: 'App ID' },
           h('input', {
-            className: 'fsim-input', value: appId, placeholder: 'cli_xxxxxxxxxxxxxxxx',
+            className: 'fsmcp-input', value: appId, placeholder: 'cli_xxxxxxxxxxxxxxxx',
             onChange: function (event) { setAppId(event.target.value); },
           })),
         h(Field, { label: 'App Secret' },
           h('input', {
-            className: 'fsim-input', type: 'password', value: secret, placeholder: '••••••••',
+            className: 'fsmcp-input', type: 'password', value: secret, placeholder: '••••••••',
             onChange: function (event) { setSecret(event.target.value); },
           })),
         h(Field, { label: '开放平台域' },
           h('select', {
-            className: 'fsim-input', value: domain,
+            className: 'fsmcp-input', value: domain,
             onChange: function (event) { setDomain(event.target.value); },
           },
             h('option', { value: 'feishu' }, '飞书（feishu.cn）'),
             h('option', { value: 'lark' }, 'Lark（larksuite.com）'))),
-        h('div', { className: 'fsim-actions' },
+        h('div', { className: 'fsmcp-actions' },
           h(Button, { variant: 'primary', disabled: busy || !appId || !secret, onClick: submit },
             busy ? '正在校验…' : '连接')),
-        message ? h('div', { className: 'fsim-error' }, message) : null);
+        message ? h('div', { className: 'fsmcp-error' }, message) : null);
     }
 
     /** 已连接视图。 */
@@ -381,10 +398,10 @@
       var allowDraftState = useState((state.allowedOpenIds || []).join('\n'));
       var allowDraft = allowDraftState[0];
       var setAllowDraft = allowDraftState[1];
-      var cwdDraftState = useState(state.sessionCwd || '~/dsh-plugin-feishu-im');
+      var cwdDraftState = useState(state.sessionCwd || '~/dsh-feishu-mcp');
       var cwdDraft = cwdDraftState[0];
       var setCwdDraft = cwdDraftState[1];
-      var wsTitleDraftState = useState(state.workspaceTitle || '飞书IM');
+      var wsTitleDraftState = useState(state.workspaceTitle || '飞书 DSH');
       var wsTitleDraft = wsTitleDraftState[0];
       var setWsTitleDraft = wsTitleDraftState[1];
       var timeoutDraftState = useState(String(state.answerTimeoutMinutes || 5));
@@ -410,11 +427,11 @@
       }, [state.answerTimeoutMinutes]);
 
       useEffect(function () {
-        setCwdDraft(state.sessionCwd || '~/dsh-plugin-feishu-im');
+        setCwdDraft(state.sessionCwd || '~/dsh-feishu-mcp');
       }, [state.sessionCwd]);
 
       useEffect(function () {
-        setWsTitleDraft(state.workspaceTitle || '飞书IM');
+        setWsTitleDraft(state.workspaceTitle || '飞书 DSH');
       }, [state.workspaceTitle]);
 
       function run(key, task, success) {
@@ -423,7 +440,7 @@
         setNotice('');
         task()
           .then(function (result) {
-            if (result && result.state) setState(result.state);
+            if (result && result.state) setState(normalizeState(result.state));
             if (success) setNotice(success);
           })
           .catch(function (failure) { setError(errorMessage(failure)); })
@@ -478,7 +495,7 @@
           return merged;
         });
         api('/prefs', { method: 'POST', body: patch })
-          .then(function (result) { setState(result.state); })
+          .then(function (result) { setState(normalizeState(result.state)); })
           .catch(function (failure) { setState(previous); setError(errorMessage(failure)); });
       }
 
@@ -490,23 +507,23 @@
       }
 
       return h(React.Fragment, null,
-        h(Card, { title: '连接状态', dot: 'on', extra: h('span', { className: 'fsim-hint' }, state.botName || state.appId) },
-          h('div', { className: 'fsim-list' },
-            h('div', { className: 'fsim-list-item' },
-              h('div', { className: 'fsim-row-text' },
-                h('div', { className: 'fsim-label' }, '机器人'),
-                h('div', { className: 'fsim-hint' }, state.botName || '（未获取到机器人名称，可点“重新校验”）')),
+        h(Card, { title: '连接状态', dot: 'on', extra: h('span', { className: 'fsmcp-hint' }, state.botName || state.appId) },
+          h('div', { className: 'fsmcp-list' },
+            h('div', { className: 'fsmcp-list-item' },
+              h('div', { className: 'fsmcp-row-text' },
+                h('div', { className: 'fsmcp-label' }, '机器人'),
+                h('div', { className: 'fsmcp-hint' }, state.botName || '（未获取到机器人名称，可点“重新校验”）')),
               null),
-            h('div', { className: 'fsim-list-item' },
-              h('div', { className: 'fsim-row-text' },
-                h('div', { className: 'fsim-label' }, 'App ID'),
-                h('div', { className: 'fsim-mono' }, state.appId)),
-              h('span', { className: 'fsim-hint' }, state.domain === 'lark' ? 'Lark' : '飞书')),
-            h('div', { className: 'fsim-list-item' },
-              h('div', { className: 'fsim-row-text' },
-                h('div', { className: 'fsim-label' }, '我的飞书 open_id'),
-                h('div', { className: 'fsim-mono' }, state.ownerOpenId || '（扫码授权后自动填写）')))),
-          h('div', { className: 'fsim-actions' },
+            h('div', { className: 'fsmcp-list-item' },
+              h('div', { className: 'fsmcp-row-text' },
+                h('div', { className: 'fsmcp-label' }, 'App ID'),
+                h('div', { className: 'fsmcp-mono' }, state.appId)),
+              h('span', { className: 'fsmcp-hint' }, state.domain === 'lark' ? 'Lark' : '飞书')),
+            h('div', { className: 'fsmcp-list-item' },
+              h('div', { className: 'fsmcp-row-text' },
+                h('div', { className: 'fsmcp-label' }, '我的飞书 open_id'),
+                h('div', { className: 'fsmcp-mono' }, state.ownerOpenId || '（扫码授权后自动填写）')))),
+          h('div', { className: 'fsmcp-actions' },
             h(Button, { variant: 'primary', disabled: busy !== '', onClick: function () {
               run('test', function () { return api('/test', { method: 'POST', body: {} }); }, '测试消息已发出，去飞书里看一下。');
             } }, busy === 'test' ? '正在发送…' : '发送测试消息'),
@@ -517,23 +534,23 @@
               if (typeof window !== 'undefined' && !window.confirm('断开后 DSH 不再向飞书推送消息，凭据会从本机删除。继续？')) return;
               run('disconnect', function () { return api('/disconnect', { method: 'POST', body: {} }); });
             } }, '断开连接')),
-          error ? h('div', { className: 'fsim-error' }, error) : null,
-          notice ? h('div', { className: 'fsim-ok' }, notice) : null),
+          error ? h('div', { className: 'fsmcp-error' }, error) : null,
+          notice ? h('div', { className: 'fsmcp-ok' }, notice) : null),
 
         h(Card, { title: '群 Webhook 强提醒' },
-          h('p', { className: 'fsim-sub' },
+          h('p', { className: 'fsmcp-sub' },
             '任何会话一轮结束时，都会向这个自定义机器人 webhook 推一张结果卡片。'),
           h(Field, {
             label: 'Webhook 地址',
             hint: '出于安全考虑，页面只显示掩码：' + (state.webhookMasked || '（未配置）') + '。留空保存表示保留原地址。',
           },
             h('input', {
-              className: 'fsim-input',
+              className: 'fsmcp-input',
               value: webhookDraft,
               placeholder: 'https://open.feishu.cn/open-apis/bot/v2/hook/…',
               onChange: function (event) { setWebhookDraft(event.target.value); },
             })),
-          h('div', { className: 'fsim-actions' },
+          h('div', { className: 'fsmcp-actions' },
             h(Button, { variant: 'primary', disabled: busy !== '', onClick: function () {
               run('webhook', function () {
                 return api('/prefs', { method: 'POST', body: { webhookUrl: webhookDraft } });
@@ -551,7 +568,7 @@
             })),
           h(Field, { label: '卡片标题', hint: '默认「DSH 任务结束提醒」。' },
             h('input', {
-              className: 'fsim-input', value: cardTitleDraft,
+              className: 'fsmcp-input', value: cardTitleDraft,
               onChange: function (event) { setCardTitleDraft(event.target.value); },
               onBlur: function () {
                 if (cardTitleDraft !== state.cardTitle) savePrefs({ cardTitle: cardTitleDraft });
@@ -559,7 +576,7 @@
             })),
           h(Field, { label: '结论摘要长度', hint: '200–8000 字符，避免卡片过长。' },
             h('input', {
-              className: 'fsim-input', type: 'number', min: 200, max: 8000, step: 100,
+              className: 'fsmcp-input', type: 'number', min: 200, max: 8000, step: 100,
               value: maxCharsDraft,
               onChange: function (event) { setMaxCharsDraft(event.target.value); },
               onBlur: function () {
@@ -571,7 +588,7 @@
             })),
 
         h(Card, { title: '推送内容' },
-          h('p', { className: 'fsim-sub' }, '所有会话都会推送。'),
+          h('p', { className: 'fsmcp-sub' }, '所有会话都会推送。'),
           h(Row, { label: '任务完成', hint: '一轮对话结束后，把结论和用时推过来。' },
             h(Switch, { label: '任务完成通知', checked: state.notify.turnEnd, onChange: function () { toggleNotify('turnEnd'); } })),
           h(Row, { label: '需要授权', hint: '工具要执行受限操作时，推一张带“允许 / 拒绝”按钮的卡片。' },
@@ -580,16 +597,16 @@
             h(Switch, { label: '提问通知', checked: state.notify.question, onChange: function () { toggleNotify('question'); } }))),
 
         h(Card, { title: '飞书会话的位置' },
-          h('p', { className: 'fsim-sub' },
+          h('p', { className: 'fsmcp-sub' },
             '在飞书里发起的对话会新建在下面这个文件夹，并在工作区列表里归到同一个名字下。'),
           h(Field, {
             label: '工作文件夹',
-            hint: '绝对路径或以 ~/ 开头；不存在会自动创建。默认 ~/dsh-plugin-feishu-im。',
+            hint: '绝对路径或以 ~/ 开头；不存在会自动创建。默认 ~/dsh-feishu-mcp。',
           },
             h('input', {
-              className: 'fsim-input',
+              className: 'fsmcp-input',
               value: cwdDraft,
-              placeholder: '~/dsh-plugin-feishu-im',
+              placeholder: '~/dsh-feishu-mcp',
               onChange: function (event) { setCwdDraft(event.target.value); },
               onBlur: function () {
                 if (cwdDraft !== state.sessionCwd) savePrefs({ sessionCwd: cwdDraft });
@@ -597,12 +614,12 @@
             })),
           h(Field, {
             label: '工作区名称',
-            hint: '工作区里显示的分组名，默认「飞书IM」。改名会在下一次新建对话时同步。',
+            hint: '工作区里显示的分组名，默认「飞书 DSH」。改名会在下一次新建对话时同步。',
           },
             h('input', {
-              className: 'fsim-input',
+              className: 'fsmcp-input',
               value: wsTitleDraft,
-              placeholder: '飞书IM',
+              placeholder: '飞书 DSH',
               onChange: function (event) { setWsTitleDraft(event.target.value); },
               onBlur: function () {
                 if (wsTitleDraft !== state.workspaceTitle) savePrefs({ workspaceTitle: wsTitleDraft });
@@ -610,19 +627,19 @@
             }))),
 
         h(Card, { title: '会话权限' },
-          h('p', { className: 'fsim-sub' },
+          h('p', { className: 'fsmcp-sub' },
             '飞书里新建的会话默认用哪种权限；单个对话可以随时用 /permission 覆盖。'),
           h(Field, {
             label: '默认权限',
             hint: PERMISSION_HINTS[state.defaultPermission || 'workspace'] || '',
           },
-            h('div', { className: 'fsim-row fsim-wrap' },
+            h('div', { className: 'fsmcp-row fsmcp-wrap' },
               PERMISSION_ORDER.map(function (key) {
                 var active = (state.defaultPermission || 'workspace') === key;
                 return h('button', {
                   key: key,
                   type: 'button',
-                  className: 'fsim-btn' + (active ? ' fsim-btn-primary' : ''),
+                  className: 'fsmcp-btn' + (active ? ' fsmcp-btn-primary' : ''),
                   disabled: Boolean(busy) || active,
                   onClick: function () { savePrefs({ defaultPermission: key }); },
                 }, PERMISSION_LABELS[key]);
@@ -640,13 +657,13 @@
               : mode === 'unsupported' ? '当前系统不支持'
               : '未托管（非服务模式）';
             return h(React.Fragment, null,
-              h('p', { className: 'fsim-sub' },
+              h('p', { className: 'fsmcp-sub' },
                 '把 DSH 做成服务后，进程退出或机器重启都会自动拉起；这里只用用户级服务，不需要 sudo。'),
               h(Field, { label: '当前状态', hint: label },
-                h('div', { className: 'fsim-row' },
+                h('div', { className: 'fsmcp-row' },
                   h('button', {
                     type: 'button',
-                    className: 'fsim-btn fsim-btn-primary',
+                    className: 'fsmcp-btn fsmcp-btn-primary',
                     disabled: Boolean(busy) || !supported || !canInstall,
                     onClick: installService,
                   }, busy === 'service'
@@ -655,20 +672,20 @@
                     : canInstall ? '做成服务（无需 sudo）' : '已是服务模式'),
                   h('button', {
                     type: 'button',
-                    className: 'fsim-btn',
+                    className: 'fsmcp-btn',
                     disabled: Boolean(busy),
                     onClick: restartNow,
                   }, busy === 'restart' ? '正在重启…' : '立即重启 DSH'))),
               info.warnings && info.warnings.length
-                ? h('div', { className: 'fsim-warn' }, info.warnings.map(function (line, index) {
+                ? h('div', { className: 'fsmcp-warn' }, info.warnings.map(function (line, index) {
                     return h('p', { key: index }, line);
                   }))
                 : null,
-              info.hint ? h('p', { className: 'fsim-hint' }, info.hint) : null,
+              info.hint ? h('p', { className: 'fsmcp-hint' }, info.hint) : null,
               info.installed && info.unit
                 ? h('details', null,
-                  h('summary', { className: 'fsim-hint' }, '查看生成的 ' + info.unitPath),
-                  h('pre', { className: 'fsim-pre' }, info.unit))
+                  h('summary', { className: 'fsmcp-hint' }, '查看生成的 ' + info.unitPath),
+                  h('pre', { className: 'fsmcp-pre' }, info.unit))
                 : null);
           })()),
 
@@ -689,13 +706,13 @@
               onChange: function () { savePrefs({ inboundReply: state.inboundReply === false }); },
             })),
           h(Field, { label: '会话定位方式', hint: 'perChat：每个飞书私聊绑定一个会话；fixed：固定会话；active：当前活跃会话。' },
-            h('div', { className: 'fsim-row fsim-wrap' },
+            h('div', { className: 'fsmcp-row fsmcp-wrap' },
               ['perChat', 'fixed', 'active'].map(function (mode) {
                 var active = (state.sessionMode || 'perChat') === mode;
                 return h('button', {
                   key: mode,
                   type: 'button',
-                  className: 'fsim-btn' + (active ? ' fsim-btn-primary' : ''),
+                  className: 'fsmcp-btn' + (active ? ' fsmcp-btn-primary' : ''),
                   disabled: Boolean(busy) || active,
                   onClick: function () { savePrefs({ sessionMode: mode }); },
                 }, mode);
@@ -715,9 +732,9 @@
             label: '飞书等待上限（分钟）',
             hint: '1–120 分钟，或选择永不超时。超时后卡片失效，请求转回 DSH 网页。',
           },
-            h('div', { className: 'fsim-inline' },
+            h('div', { className: 'fsmcp-inline' },
               h('input', {
-                className: 'fsim-input',
+                className: 'fsmcp-input',
                 type: 'number',
                 min: 1,
                 max: 120,
@@ -735,7 +752,7 @@
                   if (minutes !== state.answerTimeoutMinutes) savePrefs({ answerTimeoutMinutes: minutes });
                 },
               }),
-              h('span', { className: 'fsim-hint' }, never ? '永不超时' : '分钟'),
+              h('span', { className: 'fsmcp-hint' }, never ? '永不超时' : '分钟'),
               h(Switch, {
                 label: '永不超时',
                 checked: never,
@@ -743,8 +760,8 @@
                   savePrefs({ answerTimeoutMinutes: never ? 5 : 0 });
                 },
               }),
-              h('span', { className: 'fsim-hint' }, '永不超时'))),
-          h('div', { className: 'fsim-warn' },
+              h('span', { className: 'fsmcp-hint' }, '永不超时'))),
+          h('div', { className: 'fsmcp-warn' },
             '注意：超时之前，DSH 网页不会弹出原生的选择窗口——这条请求只在飞书里等你。',
             never
               ? '当前设为永不超时，网页端会一直保持静默，直到你在飞书作答。'
@@ -754,25 +771,25 @@
             hint: '留空表示沿用扫码授权的人。只接受列表里的用户发来的消息。',
           },
             h('textarea', {
-              className: 'fsim-textarea', value: allowDraft,
+              className: 'fsmcp-textarea', value: allowDraft,
               onChange: function (event) { setAllowDraft(event.target.value); },
               placeholder: 'ou_xxxxxxxxxxxxxxxx',
             })),
-          h('div', { className: 'fsim-actions' },
+          h('div', { className: 'fsmcp-actions' },
             h(Button, { disabled: busy !== '', onClick: function () {
               run('allow', function () {
                 return api('/prefs', { method: 'POST', body: { allowedOpenIds: allowDraft.split(/[\s,;]+/).filter(Boolean) } });
               }, '允许列表已保存。');
             } }, busy === 'allow' ? '保存中…' : '保存允许列表')),
-          h('p', { className: 'fsim-hint' }, '状态文件：', h('span', { className: 'fsim-mono' }, state.stateFile))));
+          h('p', { className: 'fsmcp-hint' }, '状态文件：', h('span', { className: 'fsmcp-mono' }, state.stateFile))));
     }
 
     /** Slot entry: the boundary sits outside the page so a render throw is visible. */
     function Page() {
-      return h(Boundary, null, h(FeishuImSection));
+      return h(Boundary, null, h(FeishuMcpSection));
     }
 
-    function FeishuImSection() {
+    function FeishuMcpSection() {
       var stateRes = useState(null);
       var state = stateRes[0];
       var setState = stateRes[1];
@@ -790,7 +807,7 @@
         setLoading(true);
         api('/state')
           .then(function (result) {
-            setState(result.state);
+            setState(normalizeState(result.state));
             setError('');
             setProbe('ok');
           })
@@ -805,35 +822,35 @@
 
       var body;
       if (loading && !state) {
-        body = h('p', { className: 'fsim-sub' }, '正在读取连接状态…');
+        body = h('p', { className: 'fsmcp-sub' }, '正在读取连接状态…');
       } else if (!state) {
-        body = h('div', { className: 'fsim-error' },
+        body = h('div', { className: 'fsmcp-error' },
           (error || '读取连接状态失败。') + ' ',
           h(Button, { onClick: load }, '重试'));
       } else if (!state.configured) {
         body = h(React.Fragment, null,
-          h(ScanCard, { onConnected: function (next) { setState(next); setError(''); } }),
-          h('div', { className: 'fsim-divider' }, '或'),
-          h(ManualCard, { onConnected: function (next) { setState(next); setError(''); } }),
-          error ? h('div', { className: 'fsim-error' }, error) : null);
+          h(ScanCard, { onConnected: function (next) { setState(normalizeState(next)); setError(''); } }),
+          h('div', { className: 'fsmcp-divider' }, '或'),
+          h(ManualCard, { onConnected: function (next) { setState(normalizeState(next)); setError(''); } }),
+          error ? h('div', { className: 'fsmcp-error' }, error) : null);
       } else {
         body = h(ConnectedView, { state: state, setState: setState });
       }
 
-      return h('div', { className: 'fsim-page' },
-        h('header', { className: 'fsim-head' },
-          h('h2', { className: 'fsim-title' }, t('title')),
-          h('p', { className: 'fsim-sub' },
+      return h('div', { className: 'fsmcp-page' },
+        h('header', { className: 'fsmcp-head' },
+          h('h2', { className: 'fsmcp-title' }, t('title')),
+          h('p', { className: 'fsmcp-sub' },
             '把 DSH 的工作进展推送到飞书，也可以在飞书里直接下达指令。所有消息都经过 DSH 处理后再回复。')),
         body,
-        h('p', { className: 'fsim-hint', style: { opacity: 0.7 } },
+        h('p', { className: 'fsmcp-hint', style: { opacity: 0.7 } },
           'dsh-feishu-mcp v' + BUILD + ' · /api/feishu-mcp/state: ' + (probe || '…')));
     }
 
     // Exposed for the render tests (scripts/render-ssr.mjs); the shell only
     // renders Page.
     return {
-      FeishuImSection: FeishuImSection,
+      FeishuMcpSection: FeishuMcpSection,
       Page: Page,
       Boundary: Boundary,
       ScanCard: ScanCard,
@@ -872,12 +889,12 @@
           return function () {
             if (style.parentNode) style.parentNode.removeChild(style);
           };
-        }, 'feishu-im: stylesheet');
+        }, 'feishu-mcp: stylesheet');
 
         app.slots.inject('settings.section', function () {
           return app.slots.register({
             name: 'settings.section',
-            id: 'feishu-im',
+            id: 'feishu-mcp',
             order: 18,
             label: function () { return t('nav'); },
           }, components.Page);
@@ -887,7 +904,7 @@
   }
 
   if (typeof globalThis !== 'undefined') {
-    globalThis.__FEISHU_IM_INTERNALS__ = { createPlugin: createPlugin, createComponents: createComponents, BUILD: BUILD };
+    globalThis.__FEISHU_MCP_INTERNALS__ = { createPlugin: createPlugin, createComponents: createComponents, BUILD: BUILD };
   }
 
   if (typeof window !== 'undefined' && window.__ModuleLoader__ && typeof window.__ModuleLoader__.load === 'function') {

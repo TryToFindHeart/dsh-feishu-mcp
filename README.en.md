@@ -1,6 +1,6 @@
 # dsh-feishu-mcp
 
-A full-featured Feishu plugin for DeepSeek Harness: turn-end webhook reminders plus a Feishu self-built app bot for private-chat control. Merged from `dsh-plugin-feishu-im` while keeping the original group webhook path.
+A full-featured Feishu plugin for DeepSeek Harness: turn-end webhook reminders plus a Feishu self-built app bot for private-chat control. Keeps the original group webhook path and adds scan-to-create, chat control, approval and question cards.
 
 ## Features
 

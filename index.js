@@ -161,23 +161,23 @@ function asStringList(value) {
  * The Host process writes no log this plugin can read, so diagnosing a silent
  * failure — a route that was never registered, a long connection that never came
  * up — otherwise needs a debugger. Off by default; the file is
- * `$DSH_HOME/feishu-im/host-probe.log`.
+ * `$DSH_HOME/dsh-feishu-mcp/host-probe.log`.
  */
 const TRACE_ENABLED = process.env.DSH_FEISHU_IM_TRACE === '1'
 
 /** Sentinel that turns the trace on at runtime without restarting the Host. */
 function traceFlagPath() {
   const home = process.env.DSH_HOME || join(homedir(), '.dsh')
-  return join(home, 'feishu-im', 'trace.on')
+  return join(home, 'dsh-feishu-mcp', 'trace.on')
 }
 
 function probe(stage, detail) {
   if (!TRACE_ENABLED && !existsSync(traceFlagPath())) return
   try {
     const home = process.env.DSH_HOME || join(homedir(), '.dsh')
-    mkdirSync(join(home, 'feishu-im'), { recursive: true })
+    mkdirSync(join(home, 'dsh-feishu-mcp'), { recursive: true })
     appendFileSync(
-      join(home, 'feishu-im', 'host-probe.log'),
+      join(home, 'dsh-feishu-mcp', 'host-probe.log'),
       `${new Date().toISOString()} ${stage} ${JSON.stringify(detail ?? {})}\n`,
     )
   } catch {
@@ -624,7 +624,7 @@ export function apply(ctx) {
    * so the script cannot report its own success. It leaves a marker instead and
    * the fresh process (this one) delivers the "back up" message.
    */
-  const restartMarker = join(process.env.DSH_HOME || join(homedir(), '.dsh'), 'feishu-im', 'restart.pending')
+  const restartMarker = join(process.env.DSH_HOME || join(homedir(), '.dsh'), 'dsh-feishu-mcp', 'restart.pending')
   void (async () => {
     try {
       const raw = await readFile(restartMarker, 'utf8')
