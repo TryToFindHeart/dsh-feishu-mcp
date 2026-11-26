@@ -810,6 +810,7 @@ export function apply(ctx) {
           'The mode never changes without that confirmation, and the call blocks until it happens.',
           'Modes: readonly (sandbox read-only), workspace (workspace read-write),',
           'auto (plugin reviews approvals in the workspace), full (danger-full-access, no prompts).',
+          '"all" is accepted as an alias for full.',
         ].join(' '),
         parameters: normalizeToolSchema({
           type: 'object',
@@ -823,8 +824,8 @@ export function apply(ctx) {
             },
             mode: {
               type: 'string',
-              enum: ['readonly', 'workspace', 'auto', 'full'],
-              description: 'Suggested target for action=request; the operator still picks and confirms.',
+              enum: ['readonly', 'workspace', 'auto', 'full', 'all'],
+              description: 'Suggested target for action=request; "all" maps to full. The operator still picks and confirms.',
             },
             reason: { type: 'string', description: 'Why the change is needed; shown on the confirmation card.' },
           },
@@ -841,7 +842,7 @@ export function apply(ctx) {
               sandbox: { type: 'string' },
             },
           }),
-          render: (result) => result?.message || '权限请求已处理',
+          render: (_args, value) => [{ type: 'text', text: String(value?.message || '权限请求已处理') }],
         },
         execute: async (args, exec) => {
           try {
@@ -859,7 +860,8 @@ export function apply(ctx) {
               sandbox: PERMISSION_MODES[mode].sandbox,
             }
           }
-          const suggested = String(args?.mode || '')
+          let suggested = String(args?.mode || '')
+          if (suggested === 'all') suggested = 'full'
           if (suggested && !PERMISSION_MODES[suggested]) {
             return { message: `未知的权限模式：${suggested}`, ok: false }
           }
