@@ -4,17 +4,24 @@
 
 - `index.js`：Host 装配。持有状态、注册 `connection.fetch` 精确路由、装配 gateway / inbound / notifier / answers / permissions / sessions，并监听 `session/event`。
 - `client.js`：设置页。只通过同源 `/api/feishu-mcp/*` 与 Host 通信，不接触密钥原文。
-- `lib/state.js`：`$DSH_HOME/dsh-feishu-mcp/state.json`，`0600` + 原子替换；`publicState()` 只回掩码。
+- `lib/state.js`：`$DSH_HOME/dsh-feishu-mcp/state.json`，`0600` + 原子替换；`publicState()` 只回掩码与布尔值。
 - `lib/webhook.js`、`lib/card.js`：群 webhook 出站，Card 2.0 构造与分页。
-- `lib/feishu.js`：租户 token、机器人信息、应用消息、 reactions、卡片更新、扫码注册等飞书 API。
+- `lib/feishu.js`：租户 token、机器人信息、应用消息、reactions、卡片更新、扫码注册等飞书 API。
 - `lib/gateway-full.js`：`WSClient` 长连接；配置变化时重连。
-- `lib/inbound-full.js`：私聊消息解析、去重、白名单、命令、会话路由、`sessionController.prompt`。
-- `lib/notify-full.js`：`turn/end` 结果卡片、Typing 反应清理、失败 CrossMark、私聊回执。
+- `lib/inbound-full.js`：私聊消息解析、去重、白名单、命令、会话路由、`sessionController.prompt`，以及静默跟随通知会话。
+- `lib/notify-full.js`：`turn/end` 结果卡片、Typing 反应清理、失败 CrossMark、私聊回执，以及 Webhook 通道选择。
 - `lib/answers.js`：审批 / 提问卡片与按钮回调。
 - `lib/permissions.js`：四种权限模式。
 - `lib/sessions.js`、`lib/captures.js`、`lib/labels.js`、`lib/restart.js`、`lib/service.js`：会话绑定、消息捕获、标签、重启与服务管理。
 
-原有 `lib/inbound.js`、`lib/notifier.js`、`lib/gateway.js` 保留用于现有单测；正式装配使用 `*-full.js` 版本。
+`lib/inbound.js`、`lib/notifier.js`、`lib/gateway.js` 是早期通道实现，保留给原有单测；正式装配使用 `*-full.js` 版本。
+
+## 两条通道
+
+1. **群 Webhook**：监听 `session/event` 的 `turn/end`，只对 `completed` / `error` / `max-tokens` 播报；取消和子代理轮次静默。先发可选 `@all` 文本，再发结果卡片。
+2. **飞书应用机器人**：`WSClient` 长连接订阅 `im.message.receive_v1`，无需公网回调地址。消息经白名单校验、按 `message_id` 去重后进入 DSH 会话；由飞书发起的轮次结束时只回原私聊，不再发群 webhook。
+
+两个测试入口分开：`/test` 只测群 Webhook，`/test-app` 只测应用机器人，避免一次点击收到两条消息。
 
 ## 一次飞书私聊的生命周期
 
@@ -22,14 +29,21 @@
 2. `inbound-full.js` 过滤机器人消息、校验白名单、按 `message_id` 去重。
 3. 解析 `/help`、`/sessions`、`/resume`、`/new`、`/queue`、`/permission`、`/stop` 等命令；普通文本走 `sessionController.prompt`。
 4. 忙时默认 `steer`（插话引导当前轮），显式 `/queue` 才 `queue`。
-5. `pending` 记录 `{sessionId -> chatId}`；`turn/end` 时 notifier 先 `takeReply`，有回执就只回原私聊，否则走群 webhook。
+5. `pending` 记录 `{sessionId -> chatId}`；`turn/end` 时 notifier 先 `takeReply`，有回执就只回原私聊。
 6. Typing 反应在收到消息时添加，结束时移除；失败改为 CrossMark。
+
+## 通知路由与静默跟随
+
+- Webhook 开启时，普通轮次只发群卡片；Webhook 关闭时，普通轮次改由应用机器人发送，不会两边都发。
+- 应用机器人卡片会带上 `会话：工作区 › 会话标题` 和本轮正文，目标优先级为：该会话绑定的飞书对话 → 首页会话 → 主人私聊。
+- 「跟随通知切换会话」默认开启：Webhook 关闭时，通知器记下最近通知的 `sessionId`；用户在该应用私聊里回复且该对话尚未绑定会话时，入站链路静默采用该 `sessionId` 并写入绑定，同时清空暂存的 `lastNoticeSessionId`，不发提示消息。
+- DSH 没有 Host 端切换网页当前选中会话的接口，所以这里切换的是飞书对话与 DSH 会话的绑定；网页当前选中会话不变。
 
 ## 审批与提问
 
 - `answers.js` 监听 `approval/request`、`user-questions/request`，通过 `sendCard` 推送卡片。
 - 审批卡按钮：`allow_once` / `deny`；提问卡把单选题变成按钮，另有「输入你的答案」让文本回复进入 `captures`。
-- 卡片回调通过长连接的 `card.action.trigger` 事件回传（参考实现同款）。
+- 卡片回调通过长连接的 `card.action.trigger` 事件回传。
 
 ## 渲染
 

@@ -1,6 +1,6 @@
 {
   "meta": {
-    "title": "Feishu Notify & Inbound (Full)",
-    "description": "Turn-end cards, scan-to-create app, private-chat control, approval/question cards, typing reactions, permission modes and session routing."
+    "title": "Feishu Notify & Chat Control",
+    "description": "Dual-channel turn notices, scan-to-create app, private-chat control, approval/question cards, permission modes and silent session follow."
   }
 }
