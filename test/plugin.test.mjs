@@ -357,3 +357,46 @@ test('没有绑定对话时，通知直接重绑首页飞书会话，而不是�
     fake.restore()
   }
 })
+
+test('turn/end 即使用 cancelled 也会撤销 Typing 反应', async () => {
+  const fake = installFetch(async (url, init) => {
+    if (String(url).includes('/auth/v3/tenant_access_token/internal')) {
+      return new Response(JSON.stringify({ code: 0, tenant_access_token: 'token-typing', expire: 7200 }), { status: 200 })
+    }
+    if (String(url).includes('/reactions')) {
+      return new Response(JSON.stringify({ code: 0 }), { status: 200 })
+    }
+    return new Response(JSON.stringify({ code: 0, data: { message_id: 'om_x' } }), { status: 200 })
+  })
+  const state = {
+    appId: 'cli_typing_test',
+    appSecret: 'secret',
+    domain: 'feishu',
+    notify: { turnEnd: true },
+    enableWebhook: false,
+    ownerOpenId: 'ou_owner',
+    allowedOpenIds: ['ou_owner'],
+    chatSessions: {},
+  }
+  let taken = 0
+  const notifier = createFullNotifier({
+    readState: async () => state,
+    log() {},
+    trace() {},
+    takeReply() { return null },
+    takeTyping() {
+      taken += 1
+      return { messageId: 'om_user', reactionId: 'reaction-typing' }
+    },
+    chatOfSession: async () => undefined,
+  })
+  const session = { id: 'session-typing', header: { cwd: '/workspace/demo' } }
+  try {
+    await notifier.onSessionEvent(session, { type: 'turn/end', data: { reason: { kind: 'cancelled' } } })
+    await new Promise((resolve) => setTimeout(resolve, 30))
+    assert.equal(taken, 1)
+    assert.ok(fake.calls.some((call) => call.init?.method === 'DELETE' && call.url.includes('/reactions/reaction-typing')))
+  } finally {
+    fake.restore()
+  }
+})

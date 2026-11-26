@@ -76,7 +76,7 @@ DeepSeek Harness 的飞书通知与指挥插件。把会话进展推送到飞书
 
 ## 验证状态
 
-- `npm test`：21/21 通过；31 个 JS 脚本 `node --check` 全部通过。
+- `npm test`：22/22 通过；31 个 JS 脚本 `node --check` 全部通过。
 - 出站 Webhook：已用真实地址发送卡片（内嵌 `@all`），返回 `StatusCode:0 / code:0`。
 - 应用机器人：扫码连接与测试消息已通过界面验证。
 - 跟随通知切换会话：已用真实通知与 `state.json` 变更验证。
