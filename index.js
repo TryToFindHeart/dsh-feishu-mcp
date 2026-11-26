@@ -376,6 +376,11 @@ export function apply(ctx) {
       if (body.sessionMode !== undefined) {
         next.sessionMode = ['fixed', 'perChat', 'active'].includes(body.sessionMode) ? body.sessionMode : 'perChat'
       }
+      if (body.sessionSwitchLimit !== undefined) {
+        const limit = Number(body.sessionSwitchLimit)
+        if (!Number.isFinite(limit) || limit < 1 || limit > 10) throw new Error('切换会话展示数量需要是 1–10 之间的数字')
+        next.sessionSwitchLimit = Math.round(limit)
+      }
       if (body.allowedOpenIds !== undefined) next.allowedOpenIds = asStringList(body.allowedOpenIds)
       if (body.allowCommands !== undefined) next.allowCommands = body.allowCommands !== false
       if (body.answerMode !== undefined) next.answerMode = body.answerMode === 'both' ? 'both' : 'feishu'
