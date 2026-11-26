@@ -1,5 +1,5 @@
 /**
- * Host half of the Feishu IM plugin.
+ * Host half of the Feishu MCP plugin.
  *
  * Responsibilities in this phase:
  *   * own the durable connection state (a `0600` document, see lib/state.js);
@@ -156,14 +156,14 @@ function asStringList(value) {
 }
 
 /**
- * Opt-in activation trace (`DSH_FEISHU_IM_TRACE=1`).
+ * Opt-in activation trace (`DSH_FEISHU_MCP_TRACE=1`).
  *
  * The Host process writes no log this plugin can read, so diagnosing a silent
  * failure — a route that was never registered, a long connection that never came
  * up — otherwise needs a debugger. Off by default; the file is
  * `$DSH_HOME/dsh-feishu-mcp/host-probe.log`.
  */
-const TRACE_ENABLED = process.env.DSH_FEISHU_IM_TRACE === '1'
+const TRACE_ENABLED = process.env.DSH_FEISHU_MCP_TRACE === '1'
 
 /** Sentinel that turns the trace on at runtime without restarting the Host. */
 function traceFlagPath() {
@@ -900,7 +900,7 @@ export function apply(ctx) {
       register: typeof connection?.fetch?.register,
     })
     if (!connection || typeof connection.fetch?.register !== 'function') {
-      warn(`[${PLUGIN_NAME}] connection.fetch is unavailable; the Feishu IM settings page cannot reach the host`)
+      warn(`[${PLUGIN_NAME}] connection.fetch is unavailable; the Feishu MCP settings page cannot reach the host`)
       return
     }
 
