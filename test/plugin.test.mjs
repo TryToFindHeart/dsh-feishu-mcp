@@ -227,3 +227,48 @@ test('启用 Webhook 时普通轮次只发群卡片，不重复发应用机器�
     fake.restore()
   }
 })
+
+test('关闭 Webhook 后普通轮次由应用机器人发回绑定会话并携带会话信息', async () => {
+  const fake = installFetch(async (url) => {
+    if (String(url).includes('tenant_access_token')) {
+      return new Response(JSON.stringify({ code: 0, tenant_access_token: 't-token' }), { status: 200 })
+    }
+    return new Response(JSON.stringify({ code: 0, data: { message_id: 'om_sent' } }), { status: 200 })
+  })
+  const state = {
+    ...baseState,
+    webhookUrl: '',
+    enableWebhook: false,
+    appId: 'cli_test',
+    appSecret: 'secret',
+    homeChatId: 'oc_home',
+    ownerOpenId: 'ou_test',
+    notify: { turnEnd: true, approval: true, question: true },
+  }
+  const notifier = createFullNotifier({
+    readState: async () => state,
+    log() {},
+    trace() {},
+    takeReply() { return null },
+    takeTyping() { return null },
+    chatOfSession: async () => ({ chatId: 'oc_bound' }),
+  })
+  const session = { id: 'session-bound', header: { cwd: '/workspace/demo' } }
+  try {
+    await notifier.onSessionEvent(session, { type: 'turn/start' })
+    await notifier.onSessionEvent(session, { type: 'assistant/message', data: { message: { content: [{ type: 'text', text: '任务完成' }] } } })
+    await notifier.onSessionEvent(session, { type: 'turn/end', data: { reason: { kind: 'completed' } } })
+    await new Promise((resolve) => setTimeout(resolve, 30))
+    const send = fake.calls.find((call) => String(call.url).includes('/im/v1/messages'))
+    assert.ok(send, '应通过应用机器人发送消息')
+    assert.match(String(send.url), /receive_id_type=chat_id/)
+    const body = JSON.parse(send.init.body)
+    assert.equal(body.receive_id, 'oc_bound')
+    const content = typeof body.content === 'string' ? JSON.parse(body.content) : body.content
+    const text = JSON.stringify(content)
+    assert.match(text, /会话/)
+    assert.match(text, /任务完成/)
+  } finally {
+    fake.restore()
+  }
+})

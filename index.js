@@ -584,6 +584,7 @@ export function apply(ctx) {
     describe,
     takeReply: inbound.takeReply,
     takeTyping: inbound.takeTyping,
+    chatOfSession: sessions.chatOfSession,
   })
   // Registered directly: a fiber-scoped listener is disposed with this plugin on
   // unload, and `ctx.effect` would run it in a forked scope whose event lineage
