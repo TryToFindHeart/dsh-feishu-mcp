@@ -527,7 +527,79 @@
       }
 
       return h(React.Fragment, null,
-        h(Card, { title: '连接状态', dot: 'on', extra: h('span', { className: 'fsmcp-hint' }, state.botName || state.appId) },
+        h(Card, { title: '全局设置' },
+          h('p', { className: 'fsmcp-sub' }, '这些开关同时作用于两条通道。'),
+          h(Row, { label: '任务完成', hint: '一轮对话结束后，把结论和用时推过来。' },
+            h(Switch, { label: '任务完成通知', checked: state.notify.turnEnd, onChange: function () { toggleNotify('turnEnd'); } })),
+          h(Row, { label: '需要授权', hint: '工具要执行受限操作时，推一张带“允许 / 拒绝”按钮的卡片。' },
+            h(Switch, { label: '授权通知', checked: state.notify.approval, onChange: function () { toggleNotify('approval'); } })),
+          h(Row, { label: '需要你回答', hint: 'DSH 向你提问时，问题会变成可选按钮。' },
+            h(Switch, { label: '提问通知', checked: state.notify.question, onChange: function () { toggleNotify('question'); } })),
+          h(Field, { label: '卡片标题', hint: '默认「DSH 任务结束提醒」。' },
+            h('input', {
+              className: 'fsmcp-input', value: cardTitleDraft,
+              onChange: function (event) { setCardTitleDraft(event.target.value); },
+              onBlur: function () {
+                if (cardTitleDraft !== state.cardTitle) savePrefs({ cardTitle: cardTitleDraft });
+              },
+            })),
+          h(Field, { label: '结论摘要长度', hint: '200–8000 字符，避免卡片过长。' },
+            h('input', {
+              className: 'fsmcp-input', type: 'number', min: 200, max: 8000, step: 100,
+              value: maxCharsDraft,
+              onChange: function (event) { setMaxCharsDraft(event.target.value); },
+              onBlur: function () {
+                var value = Math.round(Number(maxCharsDraft));
+                if (isFinite(value) && value >= 200 && value <= 8000 && value !== state.maxChars) {
+                  savePrefs({ maxChars: value });
+                }
+              },
+            })),
+          h('p', { className: 'fsmcp-hint' },
+            '每一轮通知卡片底部都会显示当前模型，提醒确认付费模型；私聊发 /model 可切换本会话模型。'),
+          h(Field, {
+            label: '工作文件夹',
+            hint: '绝对路径或以 ~/ 开头；不存在会自动创建。默认 ~/dsh-feishu-mcp。',
+          },
+            h('input', {
+              className: 'fsmcp-input',
+              value: cwdDraft,
+              placeholder: '~/dsh-feishu-mcp',
+              onChange: function (event) { setCwdDraft(event.target.value); },
+              onBlur: function () {
+                if (cwdDraft !== state.sessionCwd) savePrefs({ sessionCwd: cwdDraft });
+              },
+            })),
+          h(Field, {
+            label: '工作区名称',
+            hint: '工作区里显示的分组名，默认「飞书 DSH」。改名会在下一次新建对话时同步。',
+          },
+            h('input', {
+              className: 'fsmcp-input',
+              value: wsTitleDraft,
+              placeholder: '飞书 DSH',
+              onChange: function (event) { setWsTitleDraft(event.target.value); },
+              onBlur: function () {
+                if (wsTitleDraft !== state.workspaceTitle) savePrefs({ workspaceTitle: wsTitleDraft });
+              },
+            })),
+          h(Field, {
+            label: '默认权限',
+            hint: PERMISSION_HINTS[state.defaultPermission || 'workspace'] || '',
+          },
+            h('div', { className: 'fsmcp-row fsmcp-wrap' },
+              PERMISSION_ORDER.map(function (key) {
+                var active = (state.defaultPermission || 'workspace') === key;
+                return h('button', {
+                  key: key,
+                  type: 'button',
+                  className: 'fsmcp-btn' + (active ? ' fsmcp-btn-primary' : ''),
+                  disabled: Boolean(busy) || active,
+                  onClick: function () { savePrefs({ defaultPermission: key }); },
+                }, PERMISSION_LABELS[key]);
+              })))),
+
+        h(Card, { title: '飞书应用机器人', dot: 'on', extra: h('span', { className: 'fsmcp-hint' }, state.botName || state.appId) },
           h('div', { className: 'fsmcp-list' },
             h('div', { className: 'fsmcp-list-item' },
               h('div', { className: 'fsmcp-row-text' },
@@ -555,129 +627,6 @@
               if (typeof window !== 'undefined' && !window.confirm('断开后 DSH 不再向飞书推送消息，凭据会从本机删除。继续？')) return;
               run('disconnect', function () { return api('/disconnect', { method: 'POST', body: {} }); });
             } }, '断开连接')),
-          error ? h('div', { className: 'fsmcp-error' }, error) : null,
-          notice ? h('div', { className: 'fsmcp-ok' }, notice) : null),
-
-        h(Card, { title: '群 Webhook 强提醒' },
-          h('p', { className: 'fsmcp-sub' },
-            '任何会话一轮结束时，都会向这个自定义机器人 webhook 推一张结果卡片。'),
-          h(Field, {
-            label: 'Webhook 地址',
-            hint: '出于安全考虑，页面只显示掩码：' + (state.webhookMasked || '（未配置）') + '。留空保存表示保留原地址。',
-          },
-            h('input', {
-              className: 'fsmcp-input',
-              value: webhookDraft,
-              placeholder: 'https://open.feishu.cn/open-apis/bot/v2/hook/…',
-              onChange: function (event) { setWebhookDraft(event.target.value); },
-            })),
-          h('div', { className: 'fsmcp-actions' },
-            h(Button, { variant: 'primary', disabled: busy !== '', onClick: function () {
-              run('webhook', function () {
-                return api('/prefs', { method: 'POST', body: { webhookUrl: webhookDraft } });
-              }, 'Webhook 已保存。');
-            } }, busy === 'webhook' ? '保存中…' : '保存 Webhook'),
-            h(Button, { disabled: busy !== '', onClick: function () {
-              run('test-webhook', function () { return api('/test', { method: 'POST', body: {} }); }, '群 Webhook 测试卡片已发出。');
-            } }, busy === 'test-webhook' ? '正在发送…' : '测试群 Webhook')),
-          h(Row, { label: '启用 Webhook 推送', hint: '关闭后，普通任务结束改由飞书应用机器人推送；已保存的地址不会被删除。' },
-            h(Switch, {
-              label: '启用 Webhook 推送', checked: state.enableWebhook !== false,
-              onChange: function () { savePrefs({ enableWebhook: state.enableWebhook === false }); },
-            })),
-          h(Row, { label: '@all 强提醒', hint: '推送卡片前先发一条 @all 文本消息。' },
-            h(Switch, {
-              label: '@all 强提醒', checked: state.webhookAtAll,
-              onChange: function () { savePrefs({ webhookAtAll: !state.webhookAtAll }); },
-            })),
-          h(Row, { label: '任务完成通知', hint: '关闭后任何会话结束都不再推送卡片。' },
-            h(Switch, {
-              label: '任务完成通知', checked: state.notify.turnEnd,
-              onChange: function () {
-                var next = !state.notify.turnEnd;
-                savePrefs({ notifyTurnEnd: next, notify: Object.assign({}, state.notify, { turnEnd: next }) });
-              },
-            })),
-          h(Field, { label: '卡片标题', hint: '默认「DSH 任务结束提醒」。' },
-            h('input', {
-              className: 'fsmcp-input', value: cardTitleDraft,
-              onChange: function (event) { setCardTitleDraft(event.target.value); },
-              onBlur: function () {
-                if (cardTitleDraft !== state.cardTitle) savePrefs({ cardTitle: cardTitleDraft });
-              },
-            })),
-          h(Field, { label: '结论摘要长度', hint: '200–8000 字符，避免卡片过长。' },
-            h('input', {
-              className: 'fsmcp-input', type: 'number', min: 200, max: 8000, step: 100,
-              value: maxCharsDraft,
-              onChange: function (event) { setMaxCharsDraft(event.target.value); },
-              onBlur: function () {
-                var value = Math.round(Number(maxCharsDraft));
-                if (isFinite(value) && value >= 200 && value <= 8000 && value !== state.maxChars) {
-                  savePrefs({ maxChars: value });
-                }
-              },
-            })),
-
-        h(Card, { title: '推送内容' },
-          h('p', { className: 'fsmcp-sub' }, '所有会话都会推送。'),
-          h(Row, { label: '任务完成', hint: '一轮对话结束后，把结论和用时推过来。' },
-            h(Switch, { label: '任务完成通知', checked: state.notify.turnEnd, onChange: function () { toggleNotify('turnEnd'); } })),
-          h(Row, { label: '需要授权', hint: '工具要执行受限操作时，推一张带“允许 / 拒绝”按钮的卡片。' },
-            h(Switch, { label: '授权通知', checked: state.notify.approval, onChange: function () { toggleNotify('approval'); } })),
-          h(Row, { label: '需要你回答', hint: 'DSH 向你提问时，问题会变成可选按钮。' },
-            h(Switch, { label: '提问通知', checked: state.notify.question, onChange: function () { toggleNotify('question'); } }))),
-
-        h(Card, { title: '飞书会话的位置' },
-          h('p', { className: 'fsmcp-sub' },
-            '在飞书里发起的对话会新建在下面这个文件夹，并在工作区列表里归到同一个名字下。'),
-          h(Field, {
-            label: '工作文件夹',
-            hint: '绝对路径或以 ~/ 开头；不存在会自动创建。默认 ~/dsh-feishu-mcp。',
-          },
-            h('input', {
-              className: 'fsmcp-input',
-              value: cwdDraft,
-              placeholder: '~/dsh-feishu-mcp',
-              onChange: function (event) { setCwdDraft(event.target.value); },
-              onBlur: function () {
-                if (cwdDraft !== state.sessionCwd) savePrefs({ sessionCwd: cwdDraft });
-              },
-            })),
-          h(Field, {
-            label: '工作区名称',
-            hint: '工作区里显示的分组名，默认「飞书 DSH」。改名会在下一次新建对话时同步。',
-          },
-            h('input', {
-              className: 'fsmcp-input',
-              value: wsTitleDraft,
-              placeholder: '飞书 DSH',
-              onChange: function (event) { setWsTitleDraft(event.target.value); },
-              onBlur: function () {
-                if (wsTitleDraft !== state.workspaceTitle) savePrefs({ workspaceTitle: wsTitleDraft });
-              },
-            }))),
-
-        h(Card, { title: '会话权限' },
-          h('p', { className: 'fsmcp-sub' },
-            '飞书里新建的会话默认用哪种权限；单个对话可以随时用 /permission 覆盖。'),
-          h(Field, {
-            label: '默认权限',
-            hint: PERMISSION_HINTS[state.defaultPermission || 'workspace'] || '',
-          },
-            h('div', { className: 'fsmcp-row fsmcp-wrap' },
-              PERMISSION_ORDER.map(function (key) {
-                var active = (state.defaultPermission || 'workspace') === key;
-                return h('button', {
-                  key: key,
-                  type: 'button',
-                  className: 'fsmcp-btn' + (active ? ' fsmcp-btn-primary' : ''),
-                  disabled: Boolean(busy) || active,
-                  onClick: function () { savePrefs({ defaultPermission: key }); },
-                }, PERMISSION_LABELS[key]);
-              })))),
-
-        h(Card, { title: '指挥与安全' },
           h(Row, { label: '允许在飞书里指挥 DSH', hint: '关闭后，飞书只用来接收通知，收到的消息不会变成对话。' },
             h(Switch, {
               label: '允许指挥', checked: state.allowCommands,
@@ -786,7 +735,42 @@
                 return api('/prefs', { method: 'POST', body: { allowedOpenIds: allowDraft.split(/[\s,;]+/).filter(Boolean) } });
               }, '允许列表已保存。');
             } }, busy === 'allow' ? '保存中…' : '保存允许列表')),
-          h('p', { className: 'fsmcp-hint' }, '状态文件：', h('span', { className: 'fsmcp-mono' }, state.stateFile))));
+          error ? h('div', { className: 'fsmcp-error' }, error) : null,
+          notice ? h('div', { className: 'fsmcp-ok' }, notice) : null,
+          h('p', { className: 'fsmcp-hint' }, '状态文件：', h('span', { className: 'fsmcp-mono' }, state.stateFile)),
+
+        h(Card, { title: '群 Webhook（可选）' },
+          h('p', { className: 'fsmcp-sub' },
+            '只用自定义机器人做群强提醒。应用机器人已连接时，这一路默认关闭。'),
+          h(Field, {
+            label: 'Webhook 地址',
+            hint: '出于安全考虑，页面只显示掩码：' + (state.webhookMasked || '（未配置）') + '。留空保存表示保留原地址。',
+          },
+            h('input', {
+              className: 'fsmcp-input',
+              value: webhookDraft,
+              placeholder: 'https://open.feishu.cn/open-apis/bot/v2/hook/…',
+              onChange: function (event) { setWebhookDraft(event.target.value); },
+            })),
+          h('div', { className: 'fsmcp-actions' },
+            h(Button, { variant: 'primary', disabled: busy !== '', onClick: function () {
+              run('webhook', function () {
+                return api('/prefs', { method: 'POST', body: { webhookUrl: webhookDraft } });
+              }, 'Webhook 已保存。');
+            } }, busy === 'webhook' ? '保存中…' : '保存 Webhook'),
+            h(Button, { disabled: busy !== '', onClick: function () {
+              run('test-webhook', function () { return api('/test', { method: 'POST', body: {} }); }, '群 Webhook 测试卡片已发出。');
+            } }, busy === 'test-webhook' ? '正在发送…' : '测试群 Webhook')),
+          h(Row, { label: '启用 Webhook 推送', hint: '关闭后，普通任务结束改由飞书应用机器人推送；已保存的地址不会被删除。' },
+            h(Switch, {
+              label: '启用 Webhook 推送', checked: state.enableWebhook !== false,
+              onChange: function () { savePrefs({ enableWebhook: state.enableWebhook === false }); },
+            })),
+          h(Row, { label: '@all 强提醒', hint: '在卡片正文内 @all，不额外发文本消息。' },
+            h(Switch, {
+              label: '@all 强提醒', checked: state.webhookAtAll,
+              onChange: function () { savePrefs({ webhookAtAll: !state.webhookAtAll }); },
+            }))));
     }
 
     /** Slot entry: the boundary sits outside the page so a render throw is visible. */

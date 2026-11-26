@@ -47,7 +47,11 @@ The platform identifiers are centralized only in `lib/constants.js`; business co
 
 ## Settings
 
-Open the "飞书通知" section in DSH settings. It contains the webhook settings and test button, connection status and app test button, scan/manual onboarding, push switches (including Webhook enable and follow-notice switching), session location, permission modes and inbound controls.
+Open the "飞书通知" section in DSH settings. It is organized into three cards:
+
+- **Global**: turn-end / approval / question notification switches, card title, summary length, session location, default permission, plus a note that every card shows the current model and `/model` switches it per session.
+- **Feishu app bot**: connection status, scan/manual onboarding, test / verify / disconnect, inbound control, reply-back-to-chat, follow-notice switching, session routing, session-button limit, dual-surface asking, wait window and the allowlist.
+- **Group webhook (optional)**: webhook address, `@all`, enable switch, save / test — webhook-only settings, with no duplicated global switches.
 
 Secrets are stored in `$DSH_HOME/dsh-feishu-mcp/state.json` with mode `0600`; the browser only ever sees masked tails.
 
