@@ -2,6 +2,8 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 
 import { createInbound } from '../lib/inbound-full.js'
+import { shortSessionId } from '../lib/sessions.js'
+import { turnNotice } from '../lib/notify-full.js'
 
 function makeState(overrides = {}) {
   return {
@@ -79,7 +81,7 @@ test('发送「切换会话」返回按钮卡片，按钮数量按 sessionSwitch
     .filter((action) => action.tag === 'button')
   assert.equal(buttons.length, 3)
   assert.equal(buttons[0].value.k, 'resume')
-  assert.match(buttons[0].text.content, /^1\. /)
+  assert.match(buttons[0].text.content, /^1\. 会话 1 · #SESSION1$/)
   // 每个按钮独占一行，序列整齐，不散乱。
   assert.ok(cards[0].card.elements.slice(1).every((element) => element.tag === 'action' && element.actions.length === 1))
   assert.match(cards[0].card.elements[0].content, /最多 3 个/)
@@ -120,4 +122,17 @@ test('sessionSwitchLimit 为 0 时不限制展示，最多取 20 个会话', asy
     .flatMap((element) => element.actions)
   assert.equal(buttons.length, 8)
   assert.match(cards[0].card.elements[0].content, /最多 20 个/)
+})
+
+test('通知卡片副标题携带会话 ID 短码，自动重命名后也能定位', () => {
+  const sessionId = 'session-12a08070-deadbeef'
+  assert.equal(shortSessionId(sessionId), 'DEADBEEF')
+  const notice = turnNotice({
+    session: { id: sessionId, header: { cwd: '/tmp/syscraft' } },
+    reason: { kind: 'completed' },
+    text: '完成',
+    durationMs: 1000,
+    label: '自动重命名后的标题',
+  })
+  assert.match(notice.subtitle, /#DEADBEEF$/)
 })
