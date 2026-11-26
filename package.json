@@ -1,6 +1,6 @@
 {
   "name": "dsh-feishu-mcp",
-  "version": "0.3.5",
+  "version": "0.3.6",
   "description": "飞书全能力插件：结束卡片强提醒、扫码创建应用、私聊指挥、审批/提问卡片、Typing 反应、权限模式与会话路由。",
   "license": "MIT",
   "meta": {

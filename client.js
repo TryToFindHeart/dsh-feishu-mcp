@@ -13,7 +13,7 @@
   var API = '/api/feishu-mcp';
   // Bumped on every installed build: the page prints it, so a stale artifact is
   // visible instead of being mistaken for a code bug.
-  var BUILD = '0.3.5';
+  var BUILD = '0.3.6';
 
   // Kept in sync with lib/permissions.js; the Host validates whatever is saved.
   var PERMISSION_ORDER = ['readonly', 'workspace', 'auto', 'full'];
@@ -124,6 +124,7 @@
         approval: notify.approval !== false,
         question: notify.question !== false,
       },
+      enableWebhook: next.enableWebhook !== false,
       allowedOpenIds: Array.isArray(next.allowedOpenIds) ? next.allowedOpenIds : [],
       chatSessions: next.chatSessions && typeof next.chatSessions === 'object' ? next.chatSessions : {},
       chatPermissions: next.chatPermissions && typeof next.chatPermissions === 'object' ? next.chatPermissions : {},
@@ -537,8 +538,8 @@
                 h('div', { className: 'fsmcp-mono' }, state.ownerOpenId || '（扫码授权后自动填写）')))),
           h('div', { className: 'fsmcp-actions' },
             h(Button, { variant: 'primary', disabled: busy !== '', onClick: function () {
-              run('test', function () { return api('/test', { method: 'POST', body: {} }); }, '测试消息已发出，去飞书里看一下。');
-            } }, busy === 'test' ? '正在发送…' : '发送测试消息'),
+              run('test-app', function () { return api('/test-app', { method: 'POST', body: {} }); }, '应用机器人测试卡片已发出。');
+            } }, busy === 'test-app' ? '正在发送…' : '测试应用机器人'),
             h(Button, { disabled: busy !== '', onClick: function () {
               run('verify', function () { return api('/verify', { method: 'POST', body: {} }); }, '凭据有效。');
             } }, busy === 'verify' ? '校验中…' : '重新校验'),
@@ -568,7 +569,15 @@
               run('webhook', function () {
                 return api('/prefs', { method: 'POST', body: { webhookUrl: webhookDraft } });
               }, 'Webhook 已保存。');
-            } }, busy === 'webhook' ? '保存中…' : '保存 Webhook')),
+            } }, busy === 'webhook' ? '保存中…' : '保存 Webhook'),
+            h(Button, { disabled: busy !== '', onClick: function () {
+              run('test-webhook', function () { return api('/test', { method: 'POST', body: {} }); }, '群 Webhook 测试卡片已发出。');
+            } }, busy === 'test-webhook' ? '正在发送…' : '测试群 Webhook')),
+          h(Row, { label: '启用 Webhook 推送', hint: '关闭后，普通任务结束改由飞书应用机器人推送；已保存的地址不会被删除。' },
+            h(Switch, {
+              label: '启用 Webhook 推送', checked: state.enableWebhook !== false,
+              onChange: function () { savePrefs({ enableWebhook: state.enableWebhook === false }); },
+            })),
           h(Row, { label: '@all 强提醒', hint: '推送卡片前先发一条 @all 文本消息。' },
             h(Switch, {
               label: '@all 强提醒', checked: state.webhookAtAll,

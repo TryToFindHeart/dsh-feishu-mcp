@@ -7,6 +7,7 @@ import { join } from 'node:path'
 import { apply } from '../index.js'
 import { buildContentCards } from '../lib/card.js'
 import { createNotifier, turnNotice } from '../lib/notifier.js'
+import { createNotifier as createFullNotifier } from '../lib/notify-full.js'
 import { sendWebhook } from '../lib/webhook.js'
 
 const baseState = {
@@ -194,5 +195,35 @@ test('/test 使用已保存的 webhook 地址发送测试卡片', async () => {
     fake.restore()
     if (originalHome === undefined) delete process.env.DSH_HOME
     else process.env.DSH_HOME = originalHome
+  }
+})
+
+test('启用 Webhook 时普通轮次只发群卡片，不重复发应用机器人', async () => {
+  const fake = installFetch(async () => new Response(JSON.stringify({ code: 0 }), { status: 200 }))
+  const state = {
+    ...baseState,
+    enableWebhook: true,
+    appId: 'cli_test',
+    appSecret: 'secret',
+    ownerOpenId: 'ou_test',
+    notify: { turnEnd: true, approval: true, question: true },
+  }
+  const notifier = createFullNotifier({
+    readState: async () => state,
+    log() {},
+    trace() {},
+    takeReply() { return null },
+    takeTyping() { return null },
+  })
+  const session = { id: 'session-webhook', header: { cwd: '/workspace/demo' } }
+  try {
+    await notifier.onSessionEvent(session, { type: 'turn/start' })
+    await notifier.onSessionEvent(session, { type: 'assistant/message', data: { message: { content: [{ type: 'text', text: '任务完成' }] } } })
+    await notifier.onSessionEvent(session, { type: 'turn/end', data: { reason: { kind: 'completed' } } })
+    await new Promise((resolve) => setTimeout(resolve, 30))
+    assert.equal(fake.calls.length, 1)
+    assert.equal(fake.calls[0].url, baseState.webhookUrl)
+  } finally {
+    fake.restore()
   }
 })

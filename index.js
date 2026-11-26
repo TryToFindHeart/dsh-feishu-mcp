@@ -358,6 +358,7 @@ export function apply(ctx) {
         // 浏览器拿不到完整密钥，留空表示保留原值。
         if (value) next.webhookUrl = value
       }
+      if (body.enableWebhook !== undefined) next.enableWebhook = body.enableWebhook !== false
       if (body.webhookAtAll !== undefined) next.webhookAtAll = body.webhookAtAll !== false
       if (body.notifyTurnEnd !== undefined) {
         next.notifyTurnEnd = body.notifyTurnEnd !== false
@@ -421,7 +422,7 @@ export function apply(ctx) {
       const state = await readState()
       if (!state.webhookUrl) throw new Error('还没有配置飞书 Webhook 地址。')
       const cards = buildContentCards({
-        title: `${state.cardTitle} · 连通性测试`,
+        title: '群 Webhook 测试',
         template: 'green',
         markdown: '✅ **DSH 飞书通知已连通。**\n\n之后每一轮结束时，这里会收到一张结果卡片。',
         subtitle: '来自 dsh-feishu-mcp',
@@ -431,6 +432,26 @@ export function apply(ctx) {
       const results = []
       for (const card of cards) results.push(await sendWebhookCard(state, card))
       return json({ ok: true, sent: results.length, response: results[0] })
+    },
+
+    /** 用扫码创建的应用机器人发一张测试卡片，与群 webhook 测试互不干扰。 */
+    async testApp() {
+      const state = await requireConfigured()
+      const target = state.homeChatId
+        ? { receiveId: state.homeChatId, receiveIdType: 'chat_id' }
+        : state.ownerOpenId || state.allowedOpenIds[0]
+          ? { receiveId: state.ownerOpenId || state.allowedOpenIds[0], receiveIdType: 'open_id' }
+          : null
+      if (!target) throw new Error('尚未获取到可测试的飞书用户或会话，请点“重新校验”。')
+      const cards = buildContentCards({
+        title: '应用机器人测试',
+        template: 'blue',
+        markdown: '✅ **DSH 飞书应用机器人已连通。**\n\n之后由飞书发起的轮次会回到这个对话。',
+        subtitle: '来自 dsh-feishu-mcp',
+        note: '这是一条测试消息',
+      })
+      const sent = await sendCard(state, target, cards[0])
+      return json({ ok: true, messageId: sent?.messageId || '' })
     },
 
     /** Drop the connection. */
@@ -471,6 +492,7 @@ export function apply(ctx) {
     { path: `${API}/prefs`, methods: ['POST'], handler: handlers.prefs },
     { path: `${API}/verify`, methods: ['POST'], handler: handlers.verify },
     { path: `${API}/test`, methods: ['POST'], handler: handlers.test },
+    { path: `${API}/test-app`, methods: ['POST'], handler: handlers.testApp },
     { path: `${API}/disconnect`, methods: ['POST'], handler: handlers.disconnect },
     { path: `${API}/clear`, methods: ['POST'], handler: handlers.clear },
     {
