@@ -1,11 +1,11 @@
 # dsh-feishu-mcp
 
-A Feishu notification and control plugin for DeepSeek Harness. It pushes session progress to Feishu and lets you drive DSH from a Feishu chat with text or images; every message is processed by DSH before it is returned.
+A Feishu notification and control plugin for DeepSeek Harness. It pushes session progress to Feishu and lets you drive DSH from a Feishu chat with text, images or files; every message is processed by DSH before it is returned.
 
 The plugin has two separate channels with separate test buttons:
 
 - **Group webhook reminders**: a custom-bot webhook pushes each turn result to a group, with optional `@all`.
-- **Feishu app bot**: connect a self-built app by scanning a QR code or entering credentials manually. It supports private-chat control, approval/question cards, typing reactions and session binding.
+- **Feishu app bot**: connect a self-built app by scanning a QR code or entering credentials manually. It supports private-chat control with text, images and files, approval/question cards, typing reactions and session binding.
 
 ## Features
 
@@ -15,7 +15,7 @@ The plugin has two separate channels with separate test buttons:
 - Scan-to-create a dedicated Feishu app, or enter App ID / App Secret manually if your tenant disables device-code registration.
 - Approval cards with "allow once / deny"; question cards with option buttons and a free-text answer.
 - Typing reaction while processing, removed on success and replaced by CrossMark on failure.
-- Private messages drive DSH sessions and the result returns to the same chat.
+- Private messages drive DSH sessions and the result returns to the same chat. Images are downloaded as real bytes; `file` messages are downloaded, uploaded into the target session and handed to the model by receipt under the original filename.
 - Busy turns default to `steer` (inline guidance); `/queue` switches to queued delivery.
 - Session commands: `/sessions`, `/resume <no|id|title>`, `/new`, `/current`, `/id`.
 - Send "切换会话" in a Feishu chat to get a numbered, one-button-per-row session card; each button carries a `#short-code` derived from the session ID, so auto-renamed sessions stay identifiable. Tapping one switches immediately. Unlimited by default, capped at 20; archived sessions are excluded.
@@ -30,7 +30,7 @@ The plugin has two separate channels with separate test buttons:
 2. Webhook off: normal turn-end notices go through the app bot, carry the session title and answer, and are delivered to the bound Feishu chat; if none is bound, they fall back to the home chat or owner chat.
 3. Turns started from Feishu always answer in the originating chat and never duplicate to the group webhook.
 4. Follow-notice switching is on by default. When Webhook is off, sending a notice immediately binds the receiving Feishu chat to the notified session, overwriting any previous binding. Turn it off to keep the previous session resolution behavior.
-5. Sending "切换会话" returns an all-button card; tapping a session button switches to that session. The card shows at most the configured number of sessions (1–10).
+5. Sending "切换会话" returns an all-button card; tapping a session button switches to that session. The card shows at most the configured number of sessions (1–20; 0 means unlimited).
 
 > DSH does not expose a Host API for changing the session selected in the web UI. This plugin switches the **Feishu chat → DSH session binding**, so continuing in Feishu lands in the notified session; the web UI selection is not changed.
 
@@ -56,7 +56,7 @@ Secrets are stored in `$DSH_HOME/dsh-feishu-mcp/state.json` with mode `0600`; th
 
 ## Status
 
-- `npm test`: 26/26 passing; 31 JS files pass `node --check`.
+- `npm test`: 21/21 passing; 31 JS files pass `node --check`.
 - Outbound webhook verified against a real Feishu bot (`StatusCode:0`, `code:0`).
 - App bot connection and test message verified in the UI.
 - Follow-notice switching verified with a real notice and `state.json` changes.
