@@ -82,6 +82,11 @@
     '.fsmcp-inline{display:flex;align-items:center;gap:10px;flex-wrap:wrap;}',
     '.fsmcp-inline .fsmcp-input{width:96px;flex:none;}',
     '.fsmcp-warn{border:1px solid var(--dsw-alias-state-warn-primary,#b54708);border-radius:10px;padding:9px 12px;font-size:12px;line-height:1.55;color:var(--dsw-alias-state-warn-primary,#b54708);background:color-mix(in srgb,var(--dsw-alias-state-warn-primary,#b54708) 8%,transparent);}',
+    '.fsmcp-help{position:relative;display:inline-flex;align-items:center;justify-content:center;width:16px;height:16px;flex:none;margin-left:6px;vertical-align:middle;border-radius:50%;border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-2);color:var(--dsw-alias-label-secondary);font-size:11px;font-weight:600;line-height:1;cursor:help;}',
+    '.fsmcp-help:hover,.fsmcp-help:focus{color:var(--dsw-alias-brand-primary);border-color:var(--dsw-alias-brand-primary);outline:none;}',
+    '.fsmcp-help-tip{position:absolute;left:50%;top:calc(100% + 8px);transform:translateX(-50%);width:300px;max-width:min(320px,80vw);box-sizing:border-box;padding:10px 12px;border-radius:8px;border:1px solid var(--dsw-alias-border-l1);background:var(--dsw-alias-bg-layer-1);color:var(--dsw-alias-label-primary);box-shadow:0 8px 24px rgba(0,0,0,.14);font-size:12px;line-height:1.6;font-weight:400;white-space:pre-line;text-align:left;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .12s ease;z-index:20;}',
+    '.fsmcp-help:hover .fsmcp-help-tip,.fsmcp-help:focus .fsmcp-help-tip{opacity:1;visibility:visible;}',
+    '.fsmcp-help-tip::after{content:"";position:absolute;left:50%;bottom:100%;transform:translateX(-50%);border:6px solid transparent;border-bottom-color:var(--dsw-alias-border-l1);}',
   ].join('');
 
   async function api(path, options) {
@@ -202,6 +207,16 @@
       }, h('span', { className: 'fsmcp-switch-thumb' }));
     }
 
+    /** 问号提示：鼠标悬停或键盘聚焦时显示详细说明。 */
+    function Help(props) {
+      return h('span', {
+        className: 'fsmcp-help',
+        tabIndex: 0,
+        role: 'img',
+        'aria-label': props.label || '帮助',
+      }, '?', h('span', { className: 'fsmcp-help-tip', role: 'tooltip' }, props.text || ''));
+    }
+
     function Row(props) {
       var child = props.children;
       var isSwitch = child && child.props && child.props.role === 'switch';
@@ -225,7 +240,9 @@
 
     function Field(props) {
       return h('label', { className: 'fsmcp-field' },
-        h('span', { className: 'fsmcp-field-label' }, props.label),
+        h('span', { className: 'fsmcp-field-label' },
+          props.label,
+          props.help ? h(Help, { label: props.label + '说明', text: props.help }) : null),
         props.children,
         props.hint ? h('span', { className: 'fsmcp-hint' }, props.hint) : null);
     }
@@ -245,6 +262,7 @@
       var tick = tickState[0];
       var setTick = tickState[1];
       var alive = useRef(true);
+      var scanHelp = '扫码后怎么做：\n1. 点“生成连接二维码”，用手机飞书扫一扫。\n2. 手机上确认“创建应用 / 授权”，按提示完成。\n3. 保持这个页面打开，它会自动轮询结果并写入配置。\n4. 配置好后机器人通过长连接上线，无需公网回调地址；在飞书里私聊它即可指挥 DSH。\n5. 如果租户禁止扫码创建应用，改用下方“手动填写 App ID / App Secret”。';
 
       useEffect(function () {
         alive.current = true;
@@ -312,7 +330,7 @@
       }
 
       if (status === 'idle' || status === 'loading') {
-        return h(Card, { title: '扫码创建飞书应用' },
+        return h(Card, { title: '扫码创建飞书应用', extra: h(Help, { label: '扫码说明', text: scanHelp }) },
           h('p', { className: 'fsmcp-sub' },
             '用飞书扫一下，自动创建一个只属于 DSH 的机器人应用，并带上收发消息所需的权限。'),
           h('div', { className: 'fsmcp-actions' },
@@ -744,6 +762,7 @@
             '只用自定义机器人做群强提醒。应用机器人已连接时，这一路默认关闭。'),
           h(Field, {
             label: 'Webhook 地址',
+            help: '怎么获取 Webhook：\n1. 在目标飞书群里点右上角“设置” → “群机器人”。\n2. 点“添加机器人” → “自定义机器人”，起个名字。\n3. 复制生成的 Webhook 地址，粘贴到下面输入框并保存。\n4. 群允许时，本插件会把 @all 内嵌在卡片正文，不额外发文本。\n注意：Webhook 等同于群发送凭证，不要公开分享；页面只回显末 4 位掩码。',
             hint: '出于安全考虑，页面只显示掩码：' + (state.webhookMasked || '（未配置）') + '。留空保存表示保留原地址。',
           },
             h('input', {
