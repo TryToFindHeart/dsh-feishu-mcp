@@ -13,7 +13,7 @@
   var API = '/api/feishu-mcp';
   // Bumped on every installed build: the page prints it, so a stale artifact is
   // visible instead of being mistaken for a code bug.
-  var BUILD = '0.3.2';
+  var BUILD = '0.3.3';
 
   // Kept in sync with lib/permissions.js; the Host validates whatever is saved.
   var PERMISSION_ORDER = ['readonly', 'workspace', 'auto', 'full'];
@@ -393,6 +393,7 @@
     function ConnectedView(props) {
       var state = props.state;
       var setState = props.setState;
+      var onOnboard = props.onOnboard;
       var busyState = useState('');
       var busy = busyState[0];
       var setBusy = busyState[1];
@@ -537,6 +538,7 @@
             h(Button, { disabled: busy !== '', onClick: function () {
               run('verify', function () { return api('/verify', { method: 'POST', body: {} }); }, '凭据有效。');
             } }, busy === 'verify' ? '校验中…' : '重新校验'),
+            h(Button, { disabled: busy !== '', onClick: function () { if (onOnboard) onOnboard(); } }, '扫码创建 / 重新授权'),
             h(Button, { variant: 'danger', disabled: busy !== '', onClick: function () {
               if (typeof window !== 'undefined' && !window.confirm('断开后 DSH 不再向飞书推送消息，凭据会从本机删除。继续？')) return;
               run('disconnect', function () { return api('/disconnect', { method: 'POST', body: {} }); });
@@ -812,6 +814,9 @@
       var probeRes = useState('');
       var probe = probeRes[0];
       var setProbe = probeRes[1];
+      var onboardRes = useState(false);
+      var showOnboard = onboardRes[0];
+      var setShowOnboard = onboardRes[1];
 
       var load = useCallback(function () {
         setLoading(true);
@@ -837,14 +842,25 @@
         body = h('div', { className: 'fsmcp-error' },
           (error || '读取连接状态失败。') + ' ',
           h(Button, { onClick: load }, '重试'));
-      } else if (!state.configured) {
-        body = h(React.Fragment, null,
-          h(ScanCard, { onConnected: function (next) { setState(normalizeState(next)); setError(''); } }),
-          h('div', { className: 'fsmcp-divider' }, '或'),
-          h(ManualCard, { onConnected: function (next) { setState(normalizeState(next)); setError(''); } }),
-          error ? h('div', { className: 'fsmcp-error' }, error) : null);
       } else {
-        body = h(ConnectedView, { state: state, setState: setState });
+        var onConnected = function (next) {
+          setState(normalizeState(next));
+          setError('');
+          setShowOnboard(false);
+        };
+        var hasApp = state.appConfigured === true || Boolean(state.appId && state.appSecretConfigured);
+        var needOnboard = !hasApp || showOnboard;
+        body = h(React.Fragment, null,
+          needOnboard ? h(React.Fragment, null,
+            h(ScanCard, { onConnected: onConnected }),
+            h('div', { className: 'fsmcp-divider' }, '或'),
+            h(ManualCard, { onConnected: onConnected })) : null,
+          h(ConnectedView, {
+            state: state,
+            setState: setState,
+            onOnboard: function () { setShowOnboard(true); },
+          }),
+          error ? h('div', { className: 'fsmcp-error' }, error) : null);
       }
 
       return h('div', { className: 'fsmcp-page' },
