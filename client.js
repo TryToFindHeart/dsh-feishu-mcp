@@ -13,7 +13,7 @@
   var API = '/api/feishu-mcp';
   // Bumped on every installed build: the page prints it, so a stale artifact is
   // visible instead of being mistaken for a code bug.
-  var BUILD = '0.3.1';
+  var BUILD = '0.3.2';
 
   // Kept in sync with lib/permissions.js; the Host validates whatever is saved.
   var PERMISSION_ORDER = ['readonly', 'workspace', 'auto', 'full'];
@@ -50,19 +50,21 @@
     '.fsmcp-dot-off{background:var(--dsw-alias-state-idle-primary);}',
     '.fsmcp-btn{appearance:none;-webkit-appearance:none;height:32px;padding:0 14px;border-radius:8px;font:inherit;font-size:13px;font-weight:500;cursor:pointer;border:1px solid transparent;white-space:nowrap;transition:opacity .12s ease;display:inline-flex;align-items:center;justify-content:center;}',
     '.fsmcp-btn:disabled{opacity:.5;cursor:default;}',
-    '.fsmcp-btn-primary{background:var(--dsw-alias-brand-primary,#2f7cf6);color:var(--dsw-alias-bg-base,#fff);-webkit-text-fill-color:var(--dsw-alias-bg-base,#fff);}',
-    '.fsmcp-btn-ghost{background:var(--dsw-alias-bg-layer-2,#f2f3f5);border-color:var(--dsw-alias-border-l2,#d0d3d9);color:var(--dsw-alias-label-primary,#1a1a1a);-webkit-text-fill-color:currentColor;}',
-    '.fsmcp-btn-danger{background:transparent;border-color:var(--dsw-alias-border-l2,#d0d3d9);color:var(--dsw-alias-state-error-primary,#d92d20);-webkit-text-fill-color:currentColor;}',
+    '.fsmcp-btn-primary{background:#2f7cf6;color:#fff;-webkit-text-fill-color:#fff;border-color:#2f7cf6;}',
+    '.fsmcp-btn-ghost{background:#f2f3f5;border-color:#d0d3d9;color:#1a1a1a;-webkit-text-fill-color:#1a1a1a;}',
+    '.fsmcp-btn-danger{background:#fff;border-color:#d0d3d9;color:#d92d20;-webkit-text-fill-color:#d92d20;}',
     '.fsmcp-actions{display:flex;gap:8px;flex-wrap:wrap;}',
     '.fsmcp-input{height:34px;width:100%;box-sizing:border-box;border:1px solid var(--dsw-alias-border-l1);border-radius:8px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font-size:13px;padding:0 10px;outline:none;}',
     '.fsmcp-input:focus{border-color:var(--dsw-alias-brand-primary);}',
     '.fsmcp-textarea{width:100%;box-sizing:border-box;min-height:64px;border:1px solid var(--dsw-alias-border-l1);border-radius:8px;background:var(--dsw-alias-bg-base);color:var(--dsw-alias-label-primary);font-size:13px;padding:8px 10px;outline:none;resize:vertical;font-family:inherit;}',
     '.fsmcp-field{display:flex;flex-direction:column;gap:6px;}',
     '.fsmcp-field-label{font-size:12px;font-weight:500;color:var(--dsw-alias-label-secondary);}',
-    '.fsmcp-switch{position:relative;width:40px;height:22px;border-radius:999px;border:1px solid var(--dsw-alias-border-l2,#3a3a3a);background:var(--dsw-alias-bg-layer-2,#2a2a2a);cursor:pointer;flex:none;transition:background .15s ease;}',
-    '.fsmcp-switch[aria-checked="true"]{background:var(--dsw-alias-brand-primary,#2f7cf6);border-color:var(--dsw-alias-brand-primary,#2f7cf6);}',
-    '.fsmcp-switch::after{content:"";position:absolute;top:3px;left:3px;width:14px;height:14px;border-radius:50%;background:var(--dsw-alias-bg-base,#fff);transition:transform .15s ease;}',
-    '.fsmcp-switch[aria-checked="true"]::after{transform:translateX(18px);}',
+    '.fsmcp-switch{position:relative;width:44px;height:24px;border-radius:999px;border:1px solid #b9bec7;background:#e3e6eb;cursor:pointer;flex:none;transition:background .15s ease;padding:0;}',
+    '.fsmcp-switch[aria-checked="true"]{background:#2f7cf6;border-color:#2f7cf6;}',
+    '.fsmcp-switch-thumb{position:absolute;top:3px;left:3px;width:16px;height:16px;border-radius:50%;background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.25);transition:transform .15s ease;}',
+    '.fsmcp-switch[aria-checked="true"] .fsmcp-switch-thumb{transform:translateX(20px);}',
+    '.fsmcp-row-control{display:flex;align-items:center;gap:8px;flex:none;}',
+    '.fsmcp-switch-status{font-size:12px;min-width:20px;color:var(--dsw-alias-label-secondary);}',
     '.fsmcp-error{border:1px solid var(--dsw-alias-state-error-primary);border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.55;color:var(--dsw-alias-state-error-primary);background:color-mix(in srgb,var(--dsw-alias-state-error-primary) 8%,transparent);}',
     '.fsmcp-ok{border:1px solid var(--dsw-alias-border-l1);border-radius:10px;padding:10px 12px;font-size:12.5px;line-height:1.55;color:var(--dsw-alias-state-success-primary);background:color-mix(in srgb,var(--dsw-alias-state-success-primary) 8%,transparent);}',
     '.fsmcp-qr-wrap{display:flex;gap:20px;align-items:flex-start;flex-wrap:wrap;}',
@@ -185,17 +187,22 @@
         role: 'switch',
         'aria-checked': props.checked ? 'true' : 'false',
         'aria-label': props.label,
+        title: (props.label || '开关') + (props.checked ? '：已开启，点击关闭' : '：已关闭，点击开启'),
         className: 'fsmcp-switch',
         onClick: function () { if (!props.disabled) props.onChange(!props.checked); },
-      });
+      }, h('span', { className: 'fsmcp-switch-thumb' }));
     }
 
     function Row(props) {
+      var child = props.children;
+      var isSwitch = child && child.props && child.props.role === 'switch';
       return h('div', { className: 'fsmcp-row' },
         h('div', { className: 'fsmcp-row-text' },
           h('div', { className: 'fsmcp-label' }, props.label),
           props.hint ? h('div', { className: 'fsmcp-hint' }, props.hint) : null),
-        props.children);
+        h('div', { className: 'fsmcp-row-control' },
+          child,
+          isSwitch ? h('span', { className: 'fsmcp-switch-status' }, child.props.checked ? '开' : '关') : null));
     }
 
     function Card(props) {
@@ -561,10 +568,13 @@
               label: '@all 强提醒', checked: state.webhookAtAll,
               onChange: function () { savePrefs({ webhookAtAll: !state.webhookAtAll }); },
             })),
-          h(Row, { label: '任务完成通知', hint: '与下方“推送内容”是同一开关。' },
+          h(Row, { label: '任务完成通知', hint: '关闭后任何会话结束都不再推送卡片。' },
             h(Switch, {
-              label: '任务完成通知', checked: state.notifyTurnEnd,
-              onChange: function () { savePrefs({ notifyTurnEnd: !state.notifyTurnEnd }); },
+              label: '任务完成通知', checked: state.notify.turnEnd,
+              onChange: function () {
+                var next = !state.notify.turnEnd;
+                savePrefs({ notifyTurnEnd: next, notify: Object.assign({}, state.notify, { turnEnd: next }) });
+              },
             })),
           h(Field, { label: '卡片标题', hint: '默认「DSH 任务结束提醒」。' },
             h('input', {

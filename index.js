@@ -350,6 +350,7 @@ export function apply(ctx) {
           approval: body.notify.approval !== false,
           question: body.notify.question !== false,
         }
+        next.notifyTurnEnd = next.notify.turnEnd
       }
       if (body.webhookUrl !== undefined) {
         const value = asString(body.webhookUrl)
@@ -358,7 +359,10 @@ export function apply(ctx) {
         if (value) next.webhookUrl = value
       }
       if (body.webhookAtAll !== undefined) next.webhookAtAll = body.webhookAtAll !== false
-      if (body.notifyTurnEnd !== undefined) next.notifyTurnEnd = body.notifyTurnEnd !== false
+      if (body.notifyTurnEnd !== undefined) {
+        next.notifyTurnEnd = body.notifyTurnEnd !== false
+        next.notify = { ...(next.notify || {}), turnEnd: next.notifyTurnEnd }
+      }
       if (body.cardTitle !== undefined) next.cardTitle = asString(body.cardTitle) || next.cardTitle
       if (body.maxChars !== undefined) {
         const maxChars = Number(body.maxChars)
