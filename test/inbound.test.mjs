@@ -134,3 +134,39 @@ test('群聊消息被忽略', async () => {
 
   assert.equal(promptCalls.length, 0)
 })
+
+test('/id 同时返回会话名称与 ID', async () => {
+  const state = makeState({
+    allowedOpenIds: ['ou_user_1'],
+    chatSessions: { oc_chat_1: 'session_named_1' },
+  })
+  const replyCalls = []
+  const sessions = {
+    current: async () => 'session_named_1',
+    resolve: async (chatId, ref) => ({
+      sessionId: ref,
+      label: '日志排查',
+      title: '日志排查',
+      cwd: '/workspace/demo',
+    }),
+    ensureWorkspace: async () => undefined,
+  }
+  const inbound = createInbound({
+    ctx: { get: () => undefined },
+    readState: async () => state,
+    writeState: async (next) => { state = { ...state, ...next }; return state },
+    replyText: async (chatId, text) => { replyCalls.push({ chatId, text }) },
+    log: () => {},
+    trace: () => {},
+    sessions,
+  })
+
+  await inbound.handle(messageEvent({
+    message_id: 'om_id_1',
+    content: JSON.stringify({ text: '/id' }),
+  }))
+
+  assert.equal(replyCalls.length, 1)
+  assert.match(replyCalls[0].text, /会话名称：日志排查/)
+  assert.match(replyCalls[0].text, /会话 ID：session_named_1/)
+})
