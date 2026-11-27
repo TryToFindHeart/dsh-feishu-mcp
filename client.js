@@ -13,7 +13,7 @@
   var API = '/api/feishu-mcp';
   // Bumped on every installed build: the page prints it, so a stale artifact is
   // visible instead of being mistaken for a code bug.
-  var BUILD = '0.3.16';
+  var BUILD = '0.3.18';
 
   // Kept in sync with lib/permissions.js; the Host validates whatever is saved.
   var PERMISSION_ORDER = ['readonly', 'workspace', 'auto', 'full'];
@@ -211,39 +211,55 @@
     }
 
     /**
-     * 问号提示：用固定定位按视口算位置，避免被卡片 overflow:hidden 裁切，
-     * 也避免同事电脑面板宽度不同时弹出位置漂移。
+     * 问号提示：提示框作为原生节点挂到 document.body，脱离设置面板 DOM 树。
+     * 面板容器的 transform / filter / backdrop-filter 会让 position:fixed 的
+     * 包含块从视口退化为该祖先，导致按视口算出的 left 叠加祖先偏移、弹到右侧
+     * 并被 overflow:hidden 裁切；挂到 body 后 fixed 始终相对视口，位置可靠。
      */
     function Help(props) {
-      var ref = useRef(null);
-      var posState = useState(null);
-      var pos = posState[0];
-      var setPos = posState[1];
+      var anchorRef = useRef(null);
+      var tipRef = useRef(null);
+
+      useEffect(function () {
+        if (typeof document === 'undefined') return;
+        var tip = document.createElement('span');
+        tip.className = 'fsmcp-help-tip';
+        tip.setAttribute('role', 'tooltip');
+        tip.textContent = props.text || '';
+        document.body.appendChild(tip);
+        tipRef.current = tip;
+        return function () {
+          if (tip.parentNode) tip.parentNode.removeChild(tip);
+          if (tipRef.current === tip) tipRef.current = null;
+        };
+      }, [props.text]);
 
       function place() {
-        var el = ref.current;
-        if (!el || typeof window === 'undefined') return;
+        var el = anchorRef.current;
+        var tip = tipRef.current;
+        if (!el || !tip || typeof window === 'undefined') return;
         var rect = el.getBoundingClientRect();
         var vw = window.innerWidth || 1024;
         var width = Math.min(300, vw - 16);
         var left = Math.min(Math.max(8, rect.left), Math.max(8, vw - width - 8));
         var arrow = Math.max(12, Math.min(width - 12, rect.left + 8 - left));
-        setPos({ left: left, top: rect.bottom + 12, width: width, arrow: arrow });
+        tip.style.left = left + 'px';
+        tip.style.top = (rect.bottom + 12) + 'px';
+        tip.style.width = width + 'px';
+        tip.style.setProperty('--fsmcp-arrow', arrow + 'px');
+        tip.style.opacity = '1';
+        tip.style.visibility = 'visible';
       }
 
-      function clear() { setPos(null); }
-
-      var tipStyle = pos
-        ? {
-          left: pos.left + 'px',
-          top: pos.top + 'px',
-          width: pos.width + 'px',
-          '--fsmcp-arrow': pos.arrow + 'px',
-        }
-        : { left: '-9999px', top: '-9999px' };
+      function clear() {
+        var tip = tipRef.current;
+        if (!tip) return;
+        tip.style.opacity = '0';
+        tip.style.visibility = 'hidden';
+      }
 
       return h('span', {
-        ref: ref,
+        ref: anchorRef,
         className: 'fsmcp-help',
         tabIndex: 0,
         role: 'img',
@@ -252,7 +268,7 @@
         onFocus: place,
         onMouseLeave: clear,
         onBlur: clear,
-      }, '?', h('span', { className: 'fsmcp-help-tip', role: 'tooltip', style: tipStyle }, props.text || ''));
+      }, '?');
     }
 
     function Row(props) {
@@ -598,7 +614,7 @@
                 if (cardTitleDraft !== state.cardTitle) savePrefs({ cardTitle: cardTitleDraft });
               },
             })),
-          h(Field, { label: '结论摘要长度', hint: '200–8000 字符，避免卡片过长。' },
+          h(Field, { label: '每张卡片摘要长度', hint: '200–8000 字符；超出不截断，自动分页发下一张卡片。' },
             h('input', {
               className: 'fsmcp-input', type: 'number', min: 200, max: 8000, step: 100,
               value: maxCharsDraft,

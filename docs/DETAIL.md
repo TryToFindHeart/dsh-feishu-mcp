@@ -54,8 +54,9 @@
 
 ## 渲染
 
-- 飞书应用消息使用 `markdown.js` 的 `buildContentCards`：Card 2.0，原生 table，代码围栏保护，超长按 `CARD_CHAR_BUDGET=6000` 分页，最多 6 张。
+- 飞书应用消息使用 `markdown.js` 的 `buildContentCards`：Card 2.0，原生 table，代码围栏保护；正文按每张卡片字数预算（设置页的「每张卡片摘要长度」，默认 `maxChars=1200`）自动分页，超出不再截断、也不再有 6 张上限。
 - 群 webhook 使用 `card.js`：相同卡片语义，但表格默认用 markdown table，避免部分自定义机器人客户端拒绝原生 table 元素。
+- 结果类、状态类、审批与提问卡片统一经 `withModelFooter()` 在底部追加当前模型小字；模型/会话/权限切换卡用 `NO_MODEL_FOOTER` 标记排除，只在正文说明当前模型。
 
 ## 安全边界
 

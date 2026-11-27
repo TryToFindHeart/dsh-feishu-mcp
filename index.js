@@ -38,7 +38,7 @@ import { createGateway } from './lib/gateway-full.js'
 import { createCaptureStore } from './lib/captures.js'
 import { createInbound } from './lib/inbound-full.js'
 import { createSessions } from './lib/sessions.js'
-import { createModels, modelLabel } from './lib/models.js'
+import { createModels, modelFooter, modelLabel } from './lib/models.js'
 import { createLabels } from './lib/labels.js'
 import { createPermissions, PERMISSION_MODES } from './lib/permissions.js'
 import { createRestart } from './lib/restart.js'
@@ -46,7 +46,7 @@ import * as service from './lib/service.js'
 import { createNotifier } from './lib/notify-full.js'
 import { qrSvgDataUrl } from './lib/qr.js'
 import { applyAppSetupTemplate, clearState, publicState, readState, writeState } from './lib/state.js'
-import { buildContentCards } from './lib/card.js'
+import { buildContentCards, NO_MODEL_FOOTER, withModelFooter } from './lib/card.js'
 import { sendWebhookCard } from './lib/webhook.js'
 
 /** Route prefix on the shared API channel. `connection.fetch.register` validates
@@ -448,13 +448,15 @@ export function apply(ctx) {
     async test() {
       const state = await readState()
       if (!state.webhookUrl) throw new Error('还没有配置飞书 Webhook 地址。')
+      const note = ['这是一条测试消息', await modelFooter(models, await activeSessionId(state))].filter(Boolean).join(' · ')
       const cards = buildContentCards({
         title: '群 Webhook 测试',
         template: 'green',
         markdown: '✅ **DSH 飞书通知已连通。**\n\n之后每一轮结束时，这里会收到一张结果卡片。',
         subtitle: '来自 dsh-feishu-mcp',
-        note: '这是一条测试消息',
+        note,
         mentionAll: false,
+        bodyLimit: state.maxChars,
       })
       const results = []
       for (const card of cards) results.push(await sendWebhookCard(state, card))
@@ -470,12 +472,14 @@ export function apply(ctx) {
           ? { receiveId: state.ownerOpenId || state.allowedOpenIds[0], receiveIdType: 'open_id' }
           : null
       if (!target) throw new Error('尚未获取到可测试的飞书用户或会话，请点“重新校验”。')
+      const note = ['这是一条测试消息', await modelFooter(models, await activeSessionId(state))].filter(Boolean).join(' · ')
       const cards = buildContentCards({
         title: '应用机器人测试',
         template: 'blue',
         markdown: '✅ **DSH 飞书应用机器人已连通。**\n\n之后由飞书发起的轮次会回到这个对话。',
         subtitle: '来自 dsh-feishu-mcp',
-        note: '这是一条测试消息',
+        note,
+        bodyLimit: state.maxChars,
       })
       const sent = await sendCard(state, target, cards[0])
       return json({ ok: true, messageId: sent?.messageId || '' })
@@ -557,6 +561,22 @@ export function apply(ctx) {
   const captures = createCaptureStore()
   const sessions = createSessions({ ctx, readState, writeState, trace })
   const models = createModels({ ctx })
+
+  /** messageId → 卡片底部模型小字，卡片被替换时继续保留。 */
+  const cardFooters = new Map()
+
+  /** 测试卡等没有明确会话的场景，取最近活动会话用于展示模型。 */
+  async function activeSessionId(state) {
+    if (state.lastNoticeSessionId) return state.lastNoticeSessionId
+    const bound = Object.values(state.chatSessions || {})[0]
+    if (bound) return bound
+    try {
+      return (await sessions.list({ limit: 1 }))[0]?.sessionId || ''
+    } catch {
+      return ''
+    }
+  }
+
   const permissions = createPermissions({ ctx, readState, writeState, trace })
   /** chatId → the permission picker card's message id */
   const permissionCards = new Map()
@@ -565,6 +585,7 @@ export function apply(ctx) {
     models,
     permissionCards,
     captures,
+    cardFooter: async (sessionId) => modelFooter(models, sessionId),
     ctx,
     onResume: (chatId, row) => sessions.switchTo(chatId, row),
     readState,
@@ -593,20 +614,34 @@ export function apply(ctx) {
     onTextAnswer: (chatId, text) => answers.submitText(chatId, text),
     updateCardMessage: async (messageId, card) => {
       const state = await readState()
-      return updateCard(state, messageId, card)
+      return updateCard(state, messageId, withModelFooter(card, cardFooters.get(messageId)))
     },
     postCard: async (chatId, card) => {
       const state = await readState()
+      const sessionId = state.chatSessions?.[String(chatId)] || state.lastNoticeSessionId || ''
+      const note = card[NO_MODEL_FOOTER] ? '' : await modelFooter(models, sessionId)
+      const payload = withModelFooter(card, note)
       const token = await getTenantToken(state.appId, state.appSecret, state.domain)
-      return sendMessage(token, state.domain, {
+      const sent = await sendMessage(token, state.domain, {
         receiveId: chatId,
         receiveIdType: 'chat_id',
         msgType: 'interactive',
-        content: card,
+        content: payload,
       })
+      if (sent?.messageId && note) cardFooters.set(sent.messageId, note)
+      return sent
     },
   })
-  const gateway = createGateway({ inbound, cardAction: (data) => answers.handleCardAction(data), log: warn, trace })
+  const gateway = createGateway({
+    inbound,
+    cardAction: async (data) => {
+      const answered = await answers.handleCardAction(data)
+      if (answered !== undefined) return answered
+      return inbound.handleCardAction?.(data)
+    },
+    log: warn,
+    trace,
+  })
   const notifier = createNotifier({
     readState,
     writeState,

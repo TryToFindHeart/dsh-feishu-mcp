@@ -5,7 +5,9 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 
 import { apply } from '../index.js'
-import { buildContentCards } from '../lib/card.js'
+import { buildContentCards, NO_MODEL_FOOTER, withModelFooter } from '../lib/card.js'
+import { buildContentCards as buildAppCards } from '../lib/markdown.js'
+import { modelFooter } from '../lib/models.js'
 import { createNotifier, turnNotice } from '../lib/notifier.js'
 import { createNotifier as createFullNotifier } from '../lib/notify-full.js'
 import { createModels, modelLabel } from '../lib/models.js'
@@ -30,36 +32,50 @@ function installFetch(handler) {
   return { calls, restore: () => { globalThis.fetch = original } }
 }
 
-test('buildContentCards 返回 Card 2.0 并支持 @all', () => {
-  const cards = buildContentCards({
-    title: '测试',
-    markdown: '**正文**',
-    mentionAll: true,
-  })
-  assert.equal(cards.length, 1)
-  assert.equal(cards[0].schema, '2.0')
-  assert.equal(cards[0].header.title.content, '测试')
-  assert.match(cards[0].body.elements[0].content, /<at id=all>/)
+test('卡片构造：Card 2.0、@all 内嵌、markdown 表格、长正文分页不截断', () => {
+  const basic = buildContentCards({ title: '测试', markdown: '**正文**', mentionAll: true })
+  assert.equal(basic.length, 1)
+  assert.equal(basic[0].schema, '2.0')
+  assert.equal(basic[0].header.title.content, '测试')
+  assert.match(basic[0].body.elements[0].content, /<at id=all>/)
+
+  const table = buildContentCards({ title: '表格', markdown: '| 列 A | 列 B |\n| --- | --- |\n| 1 | 2 |' })
+  const tableContent = table[0].body.elements.map((element) => element.content).join('\n')
+  assert.match(tableContent, /\| 列 A \| 列 B \|/)
+  assert.ok(!table[0].body.elements.some((element) => element.tag === 'table'))
+
+  for (const build of [buildContentCards, buildAppCards]) {
+    const lines = Array.from({ length: 300 }, (_, index) => `第 ${index + 1} 行内容`)
+    const cards = build({ title: '长文', markdown: lines.join('\n'), bodyLimit: 200 })
+    assert.ok(cards.length > 6)
+    const joined = cards.map((card) => card.body.elements.map((element) => element.content || '').join('\n')).join('\n')
+    assert.match(joined, /第 300 行内容/)
+    assert.doesNotMatch(joined, /已省略/)
+  }
 })
 
-test('默认用 markdown 表格，不生成原生 table 元素', () => {
-  const cards = buildContentCards({
-    title: '表格',
-    markdown: '| 列 A | 列 B |\n| --- | --- |\n| 1 | 2 |',
-  })
-  const content = cards[0].body.elements.map((element) => element.content).join('\n')
-  assert.match(content, /\| 列 A \| 列 B \|/)
-  assert.ok(!cards[0].body.elements.some((element) => element.tag === 'table'))
+test('模型小字：统一生成、只追加一次、切换卡排除', async () => {
+  const models = {
+    current: () => ({ provider: 'magpie', model: 'auto/hy4flash-free' }),
+    catalog: async () => undefined,
+  }
+  assert.equal(await modelFooter(models, 'session-1'), '模型：magpie/auto/hy4flash-free')
+
+  const card10 = { config: {}, header: {}, elements: [{ tag: 'div' }] }
+  const once = withModelFooter(card10, '模型：deepseek/deepseek-chat')
+  assert.equal(once.elements.length, 2)
+  assert.doesNotMatch(JSON.stringify(card10), /模型：/)
+  assert.equal(withModelFooter(once, '模型：deepseek/deepseek-chat').elements.length, 2)
+
+  const card20 = { schema: '2.0', body: { elements: [{ tag: 'markdown', content: '正文' }] } }
+  const withFooter = withModelFooter(card20, '模型：magpie/auto/hy4flash-free')
+  assert.match(withFooter.body.elements.at(-1).content, /模型：magpie/)
+
+  const switching = { ...card10, [NO_MODEL_FOOTER]: true }
+  assert.equal(withModelFooter(switching, '模型：x'), switching)
 })
 
-test('长正文分页但最多 6 张卡片', () => {
-  const long = Array.from({ length: 1200 }, (_, index) => `第 ${index + 1} 行内容`).join('\n')
-  const cards = buildContentCards({ title: '长文', markdown: long })
-  assert.ok(cards.length > 1)
-  assert.ok(cards.length <= 6)
-})
-
-test('turnNotice 只保留必要字段并截断正文', () => {
+test('turnNotice 不再截断正文，maxChars 只作为分页预算', () => {
   const notice = turnNotice({
     session: { id: 'session-abc123', header: { cwd: '/workspace/demo' } },
     reason: { kind: 'completed' },
@@ -69,7 +85,8 @@ test('turnNotice 只保留必要字段并截断正文', () => {
   })
   assert.match(notice.title, /任务完成/)
   assert.equal(notice.template, 'green')
-  assert.match(notice.markdown, /已截断/)
+  assert.doesNotMatch(notice.markdown, /已截断/)
+  assert.match(notice.markdown, /x{100}/)
 })
 
 test('sendWebhook 把非 0 code 当作失败', async () => {
@@ -435,8 +452,8 @@ test('每张通知卡片底部带当前模型小字', async () => {
   }
 })
 
-test('createModels 从会话 agent 读取当前模型，modelLabel 显示可读名称', () => {
-  const ctx = {
+test('模型读取回退链：agent → header → 投影，used 报告本轮实际路由', () => {
+  const agentCtx = {
     get(name) {
       if (name === 'agents') {
         return { get: () => ({ model: { current: () => ({ provider: 'deepseek', model: 'deepseek-chat' }) } }) }
@@ -444,8 +461,8 @@ test('createModels 从会话 agent 读取当前模型，modelLabel 显示可读�
       return undefined
     },
   }
-  const models = createModels({ ctx })
-  assert.deepEqual(models.current('session-1'), { provider: 'deepseek', model: 'deepseek-chat' })
+  const fromAgent = createModels({ ctx: agentCtx })
+  assert.deepEqual(fromAgent.current('session-1'), { provider: 'deepseek', model: 'deepseek-chat' })
   assert.equal(
     modelLabel({ provider: 'deepseek', model: 'deepseek-chat', reasoningEffort: 'high' }, {
       groups: [{ id: 'deepseek', models: [{ id: 'deepseek-chat', name: 'DeepSeek V3' }] }],
@@ -453,64 +470,29 @@ test('createModels 从会话 agent 读取当前模型，modelLabel 显示可读�
     'deepseek/deepseek-chat（DeepSeek V3） · high',
   )
   assert.equal(modelLabel(undefined), '默认模型（未读取到具体路由）')
-})
 
-test('createModels 在 agent 没有显式选模型时回退到 request/header', () => {
-  const session = {
-    requestHeader: () => ({
-      config: { provider: 'magpie', model: 'auto/hy4flash-free' },
-    }),
-  }
-  const ctx = {
-    get(name) {
-      if (name === 'agents') return { get: () => undefined }
-      return undefined
-    },
-  }
-  const models = createModels({ ctx })
-  assert.deepEqual(models.current('session-1', session), { provider: 'magpie', model: 'auto/hy4flash-free' })
-  assert.deepEqual(models.used('session-1', session), { provider: 'magpie', model: 'auto/hy4flash-free' })
-})
+  const headerSession = { requestHeader: () => ({ config: { provider: 'magpie', model: 'auto/hy4flash-free' } }) }
+  const noAgent = createModels({ ctx: { get: () => undefined } })
+  assert.deepEqual(noAgent.current('session-1', headerSession), { provider: 'magpie', model: 'auto/hy4flash-free' })
+  assert.deepEqual(noAgent.used('session-1', headerSession), { provider: 'magpie', model: 'auto/hy4flash-free' })
 
-test('createModels 在没有 agent 与 header 时回退到 modelSelection 投影', () => {
-  const session = { requestHeader: () => undefined }
-  const ctx = {
-    get(name) {
-      if (name === 'sessionProjections') {
-        return {
-          snapshot: () => ({
-            values: {
-              modelSelection: {
-                lastUsed: { provider: 'deepseek', model: 'deepseek-chat' },
-                next: null,
-              },
-            },
-          }),
+  const projected = createModels({
+    ctx: {
+      get(name) {
+        if (name === 'sessionProjections') {
+          return { snapshot: () => ({ values: { modelSelection: { lastUsed: { provider: 'deepseek', model: 'deepseek-chat' }, next: null } } }) }
         }
-      }
-      return undefined
+        return undefined
+      },
     },
-  }
-  const models = createModels({ ctx })
-  assert.deepEqual(models.current('session-1', session), { provider: 'deepseek', model: 'deepseek-chat' })
-  assert.deepEqual(models.used('session-1', session), { provider: 'deepseek', model: 'deepseek-chat' })
-})
+  })
+  const emptySession = { requestHeader: () => undefined }
+  assert.deepEqual(projected.current('session-1', emptySession), { provider: 'deepseek', model: 'deepseek-chat' })
+  assert.deepEqual(projected.used('session-1', emptySession), { provider: 'deepseek', model: 'deepseek-chat' })
 
-test('used 优先报告本轮实际路由，而不是下一轮待选模型', () => {
-  const session = {
-    requestHeader: () => ({ config: { provider: 'magpie', model: 'auto/hy4flash-free' } }),
-  }
-  const ctx = {
-    get(name) {
-      if (name === 'agents') {
-        return { get: () => ({ model: { current: () => ({ provider: 'deepseek', model: 'deepseek-reasoner' }) } }) }
-      }
-      return undefined
-    },
-  }
-  const models = createModels({ ctx })
-  assert.deepEqual(models.current('session-1', session), { provider: 'deepseek', model: 'deepseek-reasoner' })
-  assert.deepEqual(models.used('session-1', session), { provider: 'magpie', model: 'auto/hy4flash-free' })
+  const mixed = createModels({ ctx: agentCtx })
+  assert.deepEqual(mixed.current('session-1', headerSession), { provider: 'deepseek', model: 'deepseek-chat' })
+  assert.deepEqual(mixed.used('session-1', headerSession), { provider: 'magpie', model: 'auto/hy4flash-free' })
 })
 
 test('通知底部在没有 agent 模型时仍显示 header 里的实际路由', async () => {
