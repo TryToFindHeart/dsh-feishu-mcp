@@ -452,5 +452,104 @@ test('createModels 从会话 agent 读取当前模型，modelLabel 显示可读�
     }),
     'deepseek/deepseek-chat（DeepSeek V3） · high',
   )
-  assert.equal(modelLabel(undefined), '默认模型（未显式选择）')
+  assert.equal(modelLabel(undefined), '默认模型（未读取到具体路由）')
+})
+
+test('createModels 在 agent 没有显式选模型时回退到 request/header', () => {
+  const session = {
+    requestHeader: () => ({
+      config: { provider: 'magpie', model: 'auto/hy4flash-free' },
+    }),
+  }
+  const ctx = {
+    get(name) {
+      if (name === 'agents') return { get: () => undefined }
+      return undefined
+    },
+  }
+  const models = createModels({ ctx })
+  assert.deepEqual(models.current('session-1', session), { provider: 'magpie', model: 'auto/hy4flash-free' })
+  assert.deepEqual(models.used('session-1', session), { provider: 'magpie', model: 'auto/hy4flash-free' })
+})
+
+test('createModels 在没有 agent 与 header 时回退到 modelSelection 投影', () => {
+  const session = { requestHeader: () => undefined }
+  const ctx = {
+    get(name) {
+      if (name === 'sessionProjections') {
+        return {
+          snapshot: () => ({
+            values: {
+              modelSelection: {
+                lastUsed: { provider: 'deepseek', model: 'deepseek-chat' },
+                next: null,
+              },
+            },
+          }),
+        }
+      }
+      return undefined
+    },
+  }
+  const models = createModels({ ctx })
+  assert.deepEqual(models.current('session-1', session), { provider: 'deepseek', model: 'deepseek-chat' })
+  assert.deepEqual(models.used('session-1', session), { provider: 'deepseek', model: 'deepseek-chat' })
+})
+
+test('used 优先报告本轮实际路由，而不是下一轮待选模型', () => {
+  const session = {
+    requestHeader: () => ({ config: { provider: 'magpie', model: 'auto/hy4flash-free' } }),
+  }
+  const ctx = {
+    get(name) {
+      if (name === 'agents') {
+        return { get: () => ({ model: { current: () => ({ provider: 'deepseek', model: 'deepseek-reasoner' }) } }) }
+      }
+      return undefined
+    },
+  }
+  const models = createModels({ ctx })
+  assert.deepEqual(models.current('session-1', session), { provider: 'deepseek', model: 'deepseek-reasoner' })
+  assert.deepEqual(models.used('session-1', session), { provider: 'magpie', model: 'auto/hy4flash-free' })
+})
+
+test('通知底部在没有 agent 模型时仍显示 header 里的实际路由', async () => {
+  const fake = installFetch(async () => new Response(JSON.stringify({ code: 0 }), { status: 200 }))
+  const state = {
+    webhookUrl: 'https://open.feishu.cn/open-apis/bot/v2/hook/test',
+    webhookAtAll: false,
+    notify: { turnEnd: true },
+    appId: '',
+    appSecret: '',
+  }
+  const ctx = {
+    get(name) {
+      if (name === 'agents') return { get: () => undefined }
+      return undefined
+    },
+  }
+  const models = createModels({ ctx })
+  const notifier = createFullNotifier({
+    readState: async () => state,
+    log() {},
+    trace() {},
+    models,
+  })
+  const session = {
+    id: 'session-header-model',
+    header: { cwd: '/workspace/demo' },
+    requestHeader: () => ({ config: { provider: 'magpie', model: 'auto/hy4flash-free' } }),
+  }
+  try {
+    await notifier.onSessionEvent(session, { type: 'turn/start' })
+    await notifier.onSessionEvent(session, { type: 'assistant/message', data: { message: { content: [{ type: 'text', text: '完成' }] } } })
+    await notifier.onSessionEvent(session, { type: 'turn/end', data: { reason: { kind: 'completed' } } })
+    await new Promise((resolve) => setTimeout(resolve, 30))
+    assert.equal(fake.calls.length, 1)
+    const sent = JSON.parse(fake.calls[0].init.body)
+    const footer = sent.card.body.elements.map((element) => element.content || '').join('\n')
+    assert.match(footer, /模型：magpie\/auto\/hy4flash-free/)
+  } finally {
+    fake.restore()
+  }
 })
