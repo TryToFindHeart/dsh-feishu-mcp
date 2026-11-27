@@ -17,6 +17,10 @@
 
 `lib/inbound.js`、`lib/notifier.js`、`lib/gateway.js` 是早期通道实现，保留给原有单测；正式装配使用 `*-full.js` 版本。
 
+## 安装后生效
+
+首次安装或更新插件后，**必须完全退出整个 DeepSeek Harness 进程再重新启动**，只关闭设置窗口或 DSH 窗口不会重新加载 Host 模块和新路由。重启后 Host 才会注册 `/api/feishu-mcp/*`，设置页也才会显示新版本；否则会看到 `HTTP 404` 或旧界面。
+
 ## 两条通道
 
 1. **群 Webhook**：监听 `session/event` 的 `turn/end`，只对 `completed` / `error` / `max-tokens` 播报；取消和子代理轮次静默。`@all` 内嵌在卡片正文，不额外发文本消息。

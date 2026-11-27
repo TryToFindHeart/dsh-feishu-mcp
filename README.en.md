@@ -77,3 +77,5 @@ npm install
 ```
 
 Then install the local directory with the DSH plugin manager, or update the installed version in settings. Plugin entry: `include:feishu-mcp`.
+
+> **After the first install or an upgrade**: **fully quit the whole DeepSeek Harness process and launch it again** (closing the settings window or the DSH window is not enough). The Host module and the new routes are only loaded on a full restart. Reopen "Settings → Feishu Notification" afterwards. Without a restart the plugin will not take effect and the page may show `HTTP 404` or a stale version.

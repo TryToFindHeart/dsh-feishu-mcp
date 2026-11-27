@@ -911,7 +911,9 @@
             '把 DSH 的工作进展推送到飞书，也可以在飞书里直接下达指令。所有消息都经过 DSH 处理后再回复。')),
         body,
         h('p', { className: 'fsmcp-hint', style: { opacity: 0.7 } },
-          'dsh-feishu-mcp v' + BUILD + ' · /api/feishu-mcp/state: ' + (probe || '…')));
+          'dsh-feishu-mcp v' + BUILD + ' · /api/feishu-mcp/state: ' + (probe || '…')),
+        h('p', { className: 'fsmcp-hint', style: { opacity: 0.7 } },
+          '首次安装或更新后，请完全退出整个 DSH 再重新打开；只关设置窗口或 DSH 窗口不会加载插件 Host。'));
     }
 
     // Exposed for the render tests (scripts/render-ssr.mjs); the shell only
